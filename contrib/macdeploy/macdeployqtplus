@@ -218,7 +218,10 @@ def getFrameworks(binaryPath, verbose):
     
     libraries = []
     for line in otoolLines:
-        line = line.replace("@loader_path", os.path.dirname(binaryPath))
+        if line.find("boost_system-mt") != -1:
+            line = line.replace("@loader_path", "/usr/local/opt/boost/lib")
+        else:
+            line = line.replace("@loader_path", os.path.dirname(binaryPath))
         info = FrameworkInfo.fromOtoolLibraryLine(line.strip())
         if info is not None:
             if verbose >= 3:

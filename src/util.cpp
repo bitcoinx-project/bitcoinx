@@ -88,7 +88,7 @@
 const int64_t nStartupTime = GetTime();
 
 const char * const BITCOIN_CONF_FILENAME = "bitcoinx.conf";
-const char * const BITCOIN_PID_FILENAME = "bitcoindx.pid";
+const char * const BITCOIN_PID_FILENAME = "bitcoinxd.pid";
 
 ArgsManager gArgs;
 bool fPrintToConsole = false;
