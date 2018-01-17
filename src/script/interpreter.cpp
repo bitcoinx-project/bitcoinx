@@ -199,9 +199,13 @@ static uint32_t GetHashType(const valtype& vchSig) {
     return vchSig[vchSig.size() - 1];
 }
 
-bool static UsesForkId(const valtype& vchSig) {
-    uint32_t nHashType = GetHashType(vchSig);
+static bool UsesForkId(uint32_t nHashType) {
     return nHashType & SIGHASH_FORKID;
+}
+
+static bool UsesForkId(const valtype& vchSig) {
+    uint32_t nHashType = GetHashType(vchSig);
+    return UsesForkId(nHashType);
 }
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror) {
@@ -1198,7 +1202,7 @@ PrecomputedTransactionData::PrecomputedTransactionData(const CTransaction& txTo)
 
 uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)
 {
-    if (sigversion == SIGVERSION_WITNESS_V0 || nHashType & SIGHASH_FORKID) {
+    if (sigversion == SIGVERSION_WITNESS_V0 || UsesForkId(nHashType)) {
         uint256 hashPrevouts;
         uint256 hashSequence;
         uint256 hashOutputs;
