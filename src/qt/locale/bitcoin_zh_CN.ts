@@ -793,7 +793,7 @@
     </message>
     <message>
         <source>About %1</source>
-        <translation>關於 %1</translation>
+        <translation>关于 %1</translation>
     </message>
     <message>
         <source>Command-line options</source>
@@ -3538,7 +3538,7 @@
     </message>
     <message>
         <source>Zapping all transactions from wallet...</source>
-        <translation>正在消除錢包中的所有交易...</translation>
+        <translation>正在消除钱包中的所有交易...</translation>
     </message>
     <message>
         <source>ZeroMQ notification options:</source>
