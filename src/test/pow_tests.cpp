@@ -63,12 +63,12 @@ BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual)
 
 BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
 {
-    const auto chainParams = CreateChainParams(CBaseChainParams::MAIN);
+    const auto consensusParams = CreateChainParams(CBaseChainParams::MAIN)->GetConsensus();
     std::vector<CBlockIndex> blocks(10000);
     for (int i = 0; i < 10000; i++) {
         blocks[i].pprev = i ? &blocks[i - 1] : nullptr;
-        blocks[i].nHeight = i;
-        blocks[i].nTime = 1269211443 + i * chainParams->GetConsensus().nPowTargetSpacing;
+        blocks[i].nHeight = i + consensusParams.BCXHeight;
+        blocks[i].nTime = 1269211443 + i * consensusParams.nPowTargetSpacing;
         blocks[i].nBits = 0x207fffff; /* target 0x7fffff000... */
         blocks[i].nChainWork = i ? blocks[i - 1].nChainWork + GetBlockProof(blocks[i - 1]) : arith_uint256(0);
     }
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(GetBlockProofEquivalentTime_test)
         CBlockIndex *p2 = &blocks[InsecureRandRange(10000)];
         CBlockIndex *p3 = &blocks[InsecureRandRange(10000)];
 
-        int64_t tdiff = GetBlockProofEquivalentTime(*p1, *p2, *p3, chainParams->GetConsensus());
+        int64_t tdiff = GetBlockProofEquivalentTime(*p1, *p2, *p3, consensusParams);
         BOOST_CHECK_EQUAL(tdiff, p1->GetBlockTime() - p2->GetBlockTime());
     }
 }

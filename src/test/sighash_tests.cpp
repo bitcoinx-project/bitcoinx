@@ -115,12 +115,16 @@ void static RandomTransaction(CMutableTransaction &tx, bool fSingle) {
     }
 }
 
+static bool UsesForkId(uint32_t nHashType) {
+    return nHashType & SIGHASH_FORKID;
+}
+
 BOOST_FIXTURE_TEST_SUITE(sighash_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(sighash_test)
 {
     SeedInsecureRand(false);
-
+    
     #if defined(PRINT_SIGHASH_JSON)
     std::cout << "[\n";
     std::cout << "\t[\"raw_transaction, script, input_index, hashType, signature_hash (result)\"],\n";
@@ -132,6 +136,10 @@ BOOST_AUTO_TEST_CASE(sighash_test)
     #endif
     for (int i=0; i<nRandomTests; i++) {
         int nHashType = InsecureRand32();
+        if (UsesForkId(nHashType)) {
+            i--;
+            continue;
+        }
         CMutableTransaction txTo;
         RandomTransaction(txTo, (nHashType & 0x1f) == SIGHASH_SINGLE);
         CScript scriptCode;
@@ -206,8 +214,10 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
           continue;
         }
 
-        sh = SignatureHash(scriptCode, *tx, nIn, nHashType, 0, SIGVERSION_BASE);
-        BOOST_CHECK_MESSAGE(sh.GetHex() == sigHashHex, strTest);
+        if (!UsesForkId(nHashType)) {
+            sh = SignatureHash(scriptCode, *tx, nIn, nHashType, 0, SIGVERSION_BASE);
+            BOOST_CHECK_MESSAGE(sh.GetHex() == sigHashHex, strTest);
+        }
     }
 }
 BOOST_AUTO_TEST_SUITE_END()
