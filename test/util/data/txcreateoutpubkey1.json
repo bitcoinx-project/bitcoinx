@@ -9,7 +9,7 @@
     ],
     "vout": [
         {
-            "value": 0.00000000,
+            "value": 0.0000,
             "n": 0,
             "scriptPubKey": {
                 "asm": "02a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 OP_CHECKSIG",
@@ -17,7 +17,7 @@
                 "reqSigs": 1,
                 "type": "pubkey",
                 "addresses": [
-                    "1FoG2386FG2tAJS9acMuiDsKy67aGg9MKz"
+                    "XS9VsBUhVnnbVoteR5Lp5dHLAvSKcmWB5G"
                 ]
             }
         }
