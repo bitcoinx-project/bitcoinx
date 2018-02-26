@@ -31,7 +31,7 @@ static int Halvings2Height(int nHalvings, const Consensus::Params& consensusPara
 static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
 {
     const int maxHalvings = 64;
-    const CAmount nInitialSubsidy = 50 * COIN;
+    const CAmount nInitialSubsidy = 50 * COIN * BTC_2_BCX_RATE;
     const int bcx2btcHalvingRate = consensusParams.nBCXSubsidyHalvingInterval / consensusParams.nSubsidyHalvingInterval;
 
     CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 0

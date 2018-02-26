@@ -34,7 +34,7 @@ ToMemPool(CMutableTransaction& tx)
 
 BOOST_FIXTURE_TEST_CASE(tx_mempool_block_doublespend, TestChain100Setup)
 {
-    // Make sure skipping validation of transctions that were
+    // Make sure skipping validation of transactions that were
     // validated going into the memory pool does not allow
     // double-spends in blocks to pass validation when they should not.
 
@@ -50,14 +50,14 @@ BOOST_FIXTURE_TEST_CASE(tx_mempool_block_doublespend, TestChain100Setup)
         spends[i].vin[0].prevout.hash = coinbaseTxns[0].GetHash();
         spends[i].vin[0].prevout.n = 0;
         spends[i].vout.resize(1);
-        spends[i].vout[0].nValue = 11*CENT;
+        spends[i].vout[0].nValue = 11*CENT*BTC_2_BCX_RATE;
         spends[i].vout[0].scriptPubKey = scriptPubKey;
 
         // Sign:
         std::vector<unsigned char> vchSig;
-        uint256 hash = SignatureHash(scriptPubKey, spends[i], 0, SIGHASH_ALL, 0, SIGVERSION_BASE);
+        uint256 hash = SignatureHash(scriptPubKey, spends[i], 0, SIGHASH_BCX_ALL, coinbaseTxns[0].vout[0].nValue, SIGVERSION_BASE);
         BOOST_CHECK(coinbaseKey.Sign(hash, vchSig));
-        vchSig.push_back((unsigned char)SIGHASH_ALL);
+        vchSig.push_back((unsigned char)SIGHASH_BCX_ALL);
         spends[i].vin[0].scriptSig << vchSig;
     }
 
