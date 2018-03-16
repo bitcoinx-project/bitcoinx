@@ -43,7 +43,7 @@ MY_SUBVERSION = b"/python-mininode-tester:0.0.3/"
 MY_RELAY = 1 # from version 70001 onwards, fRelay should be appended to version messages (BIP37)
 
 MAX_INV_SZ = 50000
-MAX_BLOCK_BASE_SIZE = 1000000
+MAX_BLOCK_BASE_SIZE = 2000000
 
 COIN = 100000000 # 1 btc in satoshis
 
@@ -217,7 +217,7 @@ def FromHex(obj, hex_string):
 def ToHex(obj):
     return bytes_to_hex_str(obj.serialize())
 
-# Objects that map to bitcoind objects, which can be serialized/deserialized
+# Objects that map to bitcoinxd objects, which can be serialized/deserialized
 
 class CAddress(object):
     def __init__(self):
@@ -449,7 +449,7 @@ class CTransaction(object):
         if len(self.vin) == 0:
             flags = struct.unpack("<B", f.read(1))[0]
             # Not sure why flags can't be zero, but this
-            # matches the implementation in bitcoind
+            # matches the implementation in bitcoinxd
             if (flags != 0):
                 self.vin = deser_vector(f, CTxIn)
                 self.vout = deser_vector(f, CTxOut)
@@ -1314,7 +1314,7 @@ class msg_headers(object):
         self.headers = []
 
     def deserialize(self, f):
-        # comment in bitcoind indicates these should be deserialized as blocks
+        # comment in bitcoinxd indicates these should be deserialized as blocks
         blocks = deser_vector(f, CBlock)
         for x in blocks:
             self.headers.append(CBlockHeader(x))
@@ -1455,7 +1455,7 @@ class msg_witness_blocktxn(msg_blocktxn):
         return r
 
 class NodeConnCB(object):
-    """Callback and helper functions for P2P connection to a bitcoind node.
+    """Callback and helper functions for P2P connection to a bitcoinxd node.
 
     Individual testcases should subclass this and override the on_* methods
     if they want to alter message handling behaviour.
@@ -1651,9 +1651,9 @@ class NodeConn(asyncore.dispatcher):
         b"blocktxn": msg_blocktxn
     }
     MAGIC_BYTES = {
-        "mainnet": b"\xf9\xbe\xb4\xd9",   # mainnet
-        "testnet3": b"\x0b\x11\x09\x07",  # testnet3
-        "regtest": b"\xfa\xbf\xb5\xda",   # regtest
+        "mainnet": b"\x11\x05\xbc\xf9",   # mainnet
+        "testnet3": b"\x19\x9f\xf3\x18",  # testnet3
+        "regtest": b"\x19\xf9\xa3\xfa",   # regtest
     }
 
     def __init__(self, dstaddr, dstport, rpc, callback, net="regtest", services=NODE_NETWORK, send_version=True):
@@ -1682,7 +1682,7 @@ class NodeConn(asyncore.dispatcher):
             vt.addrFrom.port = 0
             self.send_message(vt, True)
 
-        logger.info('Connecting to Bitcoin Node: %s:%d' % (self.dstaddr, self.dstport))
+        logger.info('Connecting to BitcoinX Node: %s:%d' % (self.dstaddr, self.dstport))
 
         try:
             self.connect((dstaddr, dstport))

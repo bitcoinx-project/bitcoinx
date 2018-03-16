@@ -104,7 +104,7 @@ class BIP68_112_113Test(ComparisonTestFramework):
         test.run()
 
     def send_generic_input_tx(self, node, coinbases):
-        amount = Decimal("49.99")
+        amount = Decimal("499999")
         return node.sendrawtransaction(ToHex(self.sign_transaction(node, self.create_transaction(node, node.getblock(coinbases.pop())['tx'][0], self.nodeaddress, amount))))
 
     def create_transaction(self, node, txid, to_address, amount):
