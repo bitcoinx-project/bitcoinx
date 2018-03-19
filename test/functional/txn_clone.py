@@ -56,15 +56,15 @@ class TxnMallTest(BitcoinTestFramework):
                          rawtx1["vout"][1]["scriptPubKey"]["addresses"][0]:rawtx1["vout"][1]["value"]}
         clone_locktime = rawtx1["locktime"]
         clone_raw = self.nodes[0].createrawtransaction(clone_inputs, clone_outputs, clone_locktime)
-
+        self.log.info(clone_raw)
         # createrawtransaction randomizes the order of its outputs, so swap them if necessary.
         # output 0 is at version+#inputs+input+sigstub+sequence+#outputs
         # 40 BTC serialized is 00286bee00000000
         pos0 = 2*(4+1+36+1+4+1)
         hex40 = "00286bee00000000"
         output_len = 16 + 2 + 2 * int("0x" + clone_raw[pos0 + 16 : pos0 + 16 + 2], 0)
-        if (rawtx1["vout"][0]["value"] == 40 and clone_raw[pos0 : pos0 + 16] != hex40 or
-            rawtx1["vout"][0]["value"] != 40 and clone_raw[pos0 : pos0 + 16] == hex40):
+        if (rawtx1["vout"][0]["value"] == 40*10000 and clone_raw[pos0 : pos0 + 16] != hex40 or
+            rawtx1["vout"][0]["value"] != 40*10000 and clone_raw[pos0 : pos0 + 16] == hex40):
             output0 = clone_raw[pos0 : pos0 + output_len]
             output1 = clone_raw[pos0 + output_len : pos0 + 2 * output_len]
             clone_raw = clone_raw[:pos0] + output1 + output0 + clone_raw[pos0 + 2 * output_len:]
