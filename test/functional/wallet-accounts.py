@@ -31,7 +31,7 @@ class WalletAccountsTest(BitcoinTestFramework):
         # the same address, so we call twice to get two addresses w/50 each
         node.generate(1)
         node.generate(101)
-        assert_equal(node.getbalance(), 100)
+        assert_equal(node.getbalance(), 10000*100)
 
         # there should be 2 address groups
         # each with 1 address with a balance of 50 Bitcoins
@@ -43,21 +43,23 @@ class WalletAccountsTest(BitcoinTestFramework):
         for address_group in address_groups:
             assert_equal(len(address_group), 1)
             assert_equal(len(address_group[0]), 2)
-            assert_equal(address_group[0][1], 50)
+            assert_equal(address_group[0][1], 50*10000)
             linked_addresses.add(address_group[0][0])
 
         # send 50 from each address to a third address not in this wallet
         # There's some fee that will come back to us when the miner reward
         # matures.
         common_address = "msf4WtN1YQKXvNtvdFYt9JBnUD2FB41kjr"
+        node.settxfee(1)
         txid = node.sendmany(
             fromaccount="",
-            amounts={common_address: 100},
+            amounts={common_address: 100*10000},
             subtractfeefrom=[common_address],
             minconf=1,
         )
         tx_details = node.gettransaction(txid)
         fee = -tx_details['details'][0]['fee']
+        self.log.info(fee)
         # there should be 1 address group, with the previously
         # unlinked addresses now linked (they both have 0 balance)
         address_groups = node.listaddressgroupings()
@@ -103,13 +105,13 @@ class WalletAccountsTest(BitcoinTestFramework):
 
         node.generate(101)
         
-        expected_account_balances = {"": 5200}
+        expected_account_balances = {"": 5200*10000}
         for account in accounts:
             expected_account_balances[account] = 0
         
         assert_equal(node.listaccounts(), expected_account_balances)
         
-        assert_equal(node.getbalance(""), 5200)
+        assert_equal(node.getbalance(""), 5200*10000)
         
         for account in accounts:
             address = node.getaccountaddress("")
