@@ -1269,7 +1269,7 @@ bool CScriptCheck::operator()() {
     const CScriptWitness *witness = &ptxTo->vin[nIn].scriptWitness;
     bool ret = VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata), &error);
     if (ret != true) {
-        LogPrintf(">>>script check false, %d, %d, %d, %s\n", nIn, error, nFlags, ptxTo->GetHash().ToString());
+        ::error("script check false, %d, %d, %d, %s\n", nIn, error, nFlags, ptxTo->GetHash().ToString());
     }
     return ret;
 }

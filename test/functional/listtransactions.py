@@ -21,74 +21,74 @@ class ListTransactionsTest(BitcoinTestFramework):
         self.enable_mocktime()
 
     def run_test(self):
-        # Simple send, 0 to 1:
-        txid = self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 0.1)
+        self.nodes[1].generate(1) # Simple send, 0 to 1:
+        txid = self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), Decimal("1"))
         self.sync_all()
         assert_array_result(self.nodes[0].listtransactions(),
                            {"txid":txid},
-                           {"category":"send","account":"","amount":Decimal("-0.1"),"confirmations":0})
+                           {"category":"send","account":"","amount":Decimal("-1"),"confirmations":0})
         assert_array_result(self.nodes[1].listtransactions(),
                            {"txid":txid},
-                           {"category":"receive","account":"","amount":Decimal("0.1"),"confirmations":0})
+                           {"category":"receive","account":"","amount":Decimal("1"),"confirmations":0})
         # mine a block, confirmations should change:
         self.nodes[0].generate(1)
         self.sync_all()
         assert_array_result(self.nodes[0].listtransactions(),
                            {"txid":txid},
-                           {"category":"send","account":"","amount":Decimal("-0.1"),"confirmations":1})
+                           {"category":"send","account":"","amount":Decimal("-1"),"confirmations":1})
         assert_array_result(self.nodes[1].listtransactions(),
                            {"txid":txid},
-                           {"category":"receive","account":"","amount":Decimal("0.1"),"confirmations":1})
+                           {"category":"receive","account":"","amount":Decimal("1"),"confirmations":1})
 
         # send-to-self:
-        txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), 0.2)
+        txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), 2)
         assert_array_result(self.nodes[0].listtransactions(),
                            {"txid":txid, "category":"send"},
-                           {"amount":Decimal("-0.2")})
+                           {"amount":Decimal("-2")})
         assert_array_result(self.nodes[0].listtransactions(),
                            {"txid":txid, "category":"receive"},
-                           {"amount":Decimal("0.2")})
+                           {"amount":Decimal("2")})
 
         # sendmany from node1: twice to self, twice to node2:
-        send_to = { self.nodes[0].getnewaddress() : 0.11,
-                    self.nodes[1].getnewaddress() : 0.22,
-                    self.nodes[0].getaccountaddress("from1") : 0.33,
-                    self.nodes[1].getaccountaddress("toself") : 0.44 }
+        send_to = { self.nodes[0].getnewaddress() : 11,
+                    self.nodes[1].getnewaddress() : 22,
+                    self.nodes[0].getaccountaddress("from1") : 33,
+                    self.nodes[1].getaccountaddress("toself") : 44 }
         txid = self.nodes[1].sendmany("", send_to)
         self.sync_all()
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"send","amount":Decimal("-0.11")},
+                           {"category":"send","amount":Decimal("-11")},
                            {"txid":txid} )
         assert_array_result(self.nodes[0].listtransactions(),
-                           {"category":"receive","amount":Decimal("0.11")},
+                           {"category":"receive","amount":Decimal("11")},
                            {"txid":txid} )
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"send","amount":Decimal("-0.22")},
+                           {"category":"send","amount":Decimal("-22")},
                            {"txid":txid} )
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"receive","amount":Decimal("0.22")},
+                           {"category":"receive","amount":Decimal("22")},
                            {"txid":txid} )
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"send","amount":Decimal("-0.33")},
+                           {"category":"send","amount":Decimal("-33")},
                            {"txid":txid} )
         assert_array_result(self.nodes[0].listtransactions(),
-                           {"category":"receive","amount":Decimal("0.33")},
+                           {"category":"receive","amount":Decimal("33")},
                            {"txid":txid, "account" : "from1"} )
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"send","amount":Decimal("-0.44")},
+                           {"category":"send","amount":Decimal("-44")},
                            {"txid":txid, "account" : ""} )
         assert_array_result(self.nodes[1].listtransactions(),
-                           {"category":"receive","amount":Decimal("0.44")},
+                           {"category":"receive","amount":Decimal("44")},
                            {"txid":txid, "account" : "toself"} )
 
         multisig = self.nodes[1].createmultisig(1, [self.nodes[1].getnewaddress()])
         self.nodes[0].importaddress(multisig["redeemScript"], "watchonly", False, True)
-        txid = self.nodes[1].sendtoaddress(multisig["address"], 0.1)
+        txid = self.nodes[1].sendtoaddress(multisig["address"], 1)
         self.nodes[1].generate(1)
         self.sync_all()
         assert(len(self.nodes[0].listtransactions("watchonly", 100, 0, False)) == 0)
         assert_array_result(self.nodes[0].listtransactions("watchonly", 100, 0, True),
-                           {"category":"receive","amount":Decimal("0.1")},
+                           {"category":"receive","amount":Decimal("1")},
                            {"txid":txid, "account" : "watchonly"} )
 
         self.run_rbf_opt_in_test()
@@ -128,7 +128,7 @@ class ListTransactionsTest(BitcoinTestFramework):
 
         # Create tx2 using createrawtransaction
         inputs = [{"txid":utxo_to_use["txid"], "vout":utxo_to_use["vout"]}]
-        outputs = {self.nodes[0].getnewaddress(): 0.999}
+        outputs = {self.nodes[0].getnewaddress(): 0.9}
         tx2 = self.nodes[1].createrawtransaction(inputs, outputs)
         tx2_signed = self.nodes[1].signrawtransaction(tx2)["hex"]
         txid_2 = self.nodes[1].sendrawtransaction(tx2_signed)
@@ -142,7 +142,7 @@ class ListTransactionsTest(BitcoinTestFramework):
         # Tx3 will opt-in to RBF
         utxo_to_use = get_unconfirmed_utxo_entry(self.nodes[0], txid_2)
         inputs = [{"txid": txid_2, "vout":utxo_to_use["vout"]}]
-        outputs = {self.nodes[1].getnewaddress(): 0.998}
+        outputs = {self.nodes[1].getnewaddress(): 0.8}
         tx3 = self.nodes[0].createrawtransaction(inputs, outputs)
         tx3_modified = txFromHex(tx3)
         tx3_modified.vin[0].nSequence = 0
@@ -159,7 +159,7 @@ class ListTransactionsTest(BitcoinTestFramework):
         # that does.
         utxo_to_use = get_unconfirmed_utxo_entry(self.nodes[1], txid_3)
         inputs = [{"txid": txid_3, "vout":utxo_to_use["vout"]}]
-        outputs = {self.nodes[0].getnewaddress(): 0.997}
+        outputs = {self.nodes[0].getnewaddress(): 0.7}
         tx4 = self.nodes[1].createrawtransaction(inputs, outputs)
         tx4_signed = self.nodes[1].signrawtransaction(tx4)["hex"]
         txid_4 = self.nodes[1].sendrawtransaction(tx4_signed)
@@ -171,7 +171,7 @@ class ListTransactionsTest(BitcoinTestFramework):
 
         # Replace tx3, and check that tx4 becomes unknown
         tx3_b = tx3_modified
-        tx3_b.vout[0].nValue -= int(Decimal("0.004") * COIN) # bump the fee
+        tx3_b.vout[0].nValue -= int(Decimal("0.4") * COIN/10000) # bump the fee
         tx3_b = bytes_to_hex_str(tx3_b.serialize())
         tx3_b_signed = self.nodes[0].signrawtransaction(tx3_b)['hex']
         txid_3b = self.nodes[0].sendrawtransaction(tx3_b_signed, True)

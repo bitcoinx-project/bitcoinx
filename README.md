@@ -1,7 +1,7 @@
 BitcoinX Core integration/staging tree
 =====================================
 
-[![Build Status](https://travis-ci.org/bitcoinx-project/bitcoinx.svg?branch=master)](https://travis-ci.org/bitcoinx/bitcoinx)
+[![Build Status](https://travis-ci.org/bitcoinx-project/bitcoinx.svg?branch=master)](https://travis-ci.org/bitcoinx-project/bitcoinx)
 
 https://bcx.org
 
