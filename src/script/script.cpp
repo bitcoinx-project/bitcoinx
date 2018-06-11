@@ -7,6 +7,25 @@
 
 #include "tinyformat.h"
 #include "utilstrencodings.h"
+#include "contract/contract.h"
+
+
+unsigned int ScriptConf::MAX_SCRIPT_SIZE()
+{
+    if (Contract::Enabled()) {
+        return 129000; // (129 kb)
+    }
+    return 10000;
+}
+
+unsigned int ScriptConf::MAX_SCRIPT_ELEMENT_SIZE()
+{
+    if (Contract::Enabled()) {
+        return 128000; // (128 kb)
+    }
+    return 520;
+}
+
 
 const char* GetOpName(opcodetype opcode)
 {
@@ -139,6 +158,11 @@ const char* GetOpName(opcodetype opcode)
     case OP_NOP9                   : return "OP_NOP9";
     case OP_NOP10                  : return "OP_NOP10";
 
+    // contract
+    case OP_CREATECONTRACT         : return "OP_CREATECONTRACT";
+    case OP_SENDTOCONTRACT         : return "OP_SENDTOCONTRACT";
+    case OP_SPEND                  : return "OP_SPEND";
+
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
     // Note:
@@ -168,7 +192,7 @@ unsigned int CScript::GetSigOpCount(bool fAccurate) const
             if (fAccurate && lastOpcode >= OP_1 && lastOpcode <= OP_16)
                 n += DecodeOP_N(lastOpcode);
             else
-                n += MAX_PUBKEYS_PER_MULTISIG;
+                n += ScriptConf::MAX_PUBKEYS_PER_MULTISIG;
         }
         lastOpcode = opcode;
     }
@@ -197,6 +221,28 @@ unsigned int CScript::GetSigOpCount(const CScript& scriptSig) const
     /// ... and return its opcount:
     CScript subscript(vData.begin(), vData.end());
     return subscript.GetSigOpCount(true);
+}
+
+bool CScript::IsPayToPubkey() const
+{
+    if (this->size() == 35 && (*this)[0] == 33 && (*this)[34] == OP_CHECKSIG && ((*this)[1] == 0x02 || (*this)[1] == 0x03)) {
+        return true;
+    }
+    if (this->size() == 67 && (*this)[0] == 65 && (*this)[66] == OP_CHECKSIG && (*this)[1] == 0x04) {
+        return true;
+    }
+    return false;
+}
+
+bool CScript::IsPayToPubkeyHash() const
+{
+    // Extra-fast test for pay-to-pubkeyhash CScripts:
+    return (this->size() == 25 &&
+            (*this)[0] == OP_DUP &&
+            (*this)[1] == OP_HASH160 &&
+            (*this)[2] == 0x14 &&
+            (*this)[23] == OP_EQUALVERIFY &&
+            (*this)[24] == OP_CHECKSIG);
 }
 
 bool CScript::IsPayToScriptHash() const
@@ -274,7 +320,7 @@ bool CScript::HasValidOps() const
     while (it < end()) {
         opcodetype opcode;
         std::vector<unsigned char> item;
-        if (!GetOp(it, opcode, item) || opcode > MAX_OPCODE || item.size() > MAX_SCRIPT_ELEMENT_SIZE) {
+        if (!GetOp(it, opcode, item) || opcode > MAX_OPCODE || item.size() > ScriptConf::MAX_SCRIPT_ELEMENT_SIZE()) {
             return false;
         }
     }

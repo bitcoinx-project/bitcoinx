@@ -356,6 +356,9 @@ public:
         }
         return false;
     }
+
+    bool HasCreateOrSendOp() const;
+    bool HasSpendOp() const;
 };
 
 /** A mutable version of CTransaction. */

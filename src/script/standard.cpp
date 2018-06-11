@@ -10,6 +10,9 @@
 #include "util.h"
 #include "utilstrencodings.h"
 
+#include "contract/config.h"
+#include "contract/ethtransaction.h"
+#include "contract/ethtxversion.h"
 
 typedef std::vector<unsigned char> valtype;
 
@@ -30,14 +33,19 @@ const char* GetTxnOutputType(txnouttype t)
     case TX_NULL_DATA: return "nulldata";
     case TX_WITNESS_V0_KEYHASH: return "witness_v0_keyhash";
     case TX_WITNESS_V0_SCRIPTHASH: return "witness_v0_scripthash";
+    case TX_CREATE_CONTRACT: return "create_contract";
+    case TX_SEND_TO_CONTRACT: return "send_to_contract";
     }
     return nullptr;
 }
 
 /**
  * Return public keys or hashes from scriptPubKey, for 'standard' transaction types.
+ * fContractConsensus is true when evaluating if a contract tx is "standard" for consensus purposes
+ * It is false in all other cases, so to prevent a particular contract tx from being broadcast on mempool, but allowed in blocks,
+ * one should ensure that contractConsensus is false
  */
-bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet)
+bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet, bool fContractConsensus)
 {
     // Templates
     static std::multimap<txnouttype, CScript> mTemplates;
@@ -51,6 +59,12 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
 
         // Sender provides N pubkeys, receivers provides M signatures
         mTemplates.insert(std::make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));
+
+        // Contract creation tx
+        mTemplates.insert(std::make_pair(TX_CREATE_CONTRACT, CScript() << OP_VERSION << OP_GAS_LIMIT << OP_GAS_PRICE << OP_DATA << OP_CREATECONTRACT));
+
+        // Send to contract tx
+        mTemplates.insert(std::make_pair(TX_SEND_TO_CONTRACT, CScript() << OP_VERSION << OP_GAS_LIMIT << OP_GAS_PRICE << OP_DATA << OP_PUBKEYHASH << OP_SENDTOCONTRACT));
     }
 
     vSolutionsRet.clear();
@@ -100,6 +114,10 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
 
         opcodetype opcode1, opcode2;
         std::vector<unsigned char> vch1, vch2;
+
+        static const EthTxVersion sInvalidVersion = EthTxVersion::FromRaw(999);
+
+        EthTxVersion version = sInvalidVersion;
 
         // Compare
         CScript::const_iterator pc1 = script1.begin();
@@ -163,6 +181,73 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
                 else
                     break;
             }
+            else if (opcode2 == OP_VERSION)
+            {
+                if(0 <= opcode1 && opcode1 <= OP_PUSHDATA4)
+                {
+                    if(vch1.empty() || vch1.size() > 4 || (vch1.back() & 0x80)) {
+                        break;
+                    }
+
+                    version = EthTxVersion::FromRaw(CScriptNum::vch_to_uint64(vch1));
+                    if(!(version == EthTxVersion::GetDefault() || version == EthTxVersion::GetNoExec())){
+                        // only allow standard EVM and no-exec transactions to live in mempool
+                        break;
+                    }
+                }
+            } else if(opcode2 == OP_GAS_LIMIT) {
+                try {
+                    uint64_t val = CScriptNum::vch_to_uint64(vch1);
+                    if(fContractConsensus) {
+                        // consensus rules (this is checked more in depth later)
+                        if (version != EthTxVersion::GetNoExec() && val < 1) {
+                            break;
+                        }
+                        if (val > MAX_BLOCK_GAS_LIMIT) {
+                            // do not allow transactions that could use more gas than is in a block
+                            break;
+                        }
+                    }else{
+                        // standard mempool rules for contracts
+                        // consensus rules for contracts
+                        if (version != EthTxVersion::GetNoExec() && val < STANDARD_MINIMUM_GAS_LIMIT) {
+                            break;
+                        }
+
+                        if (val > DEFAULT_BLOCK_GAS_LIMIT / 2) {
+                            // don't allow transactions that use more than 1/2 block of gas to be broadcast on the mempool
+                            break;
+                        }
+                    }
+                } catch (const scriptnum_error &err) {
+                    break;
+                }
+            } else if(opcode2 == OP_GAS_PRICE) {
+                try {
+                    uint64_t val = CScriptNum::vch_to_uint64(vch1);
+                    if(fContractConsensus) {
+                        // consensus rules (this is checked more in depth later)
+                        if (version != EthTxVersion::GetNoExec() && val < 1) {
+                            break;
+                        }
+                    }else{
+                        // standard mempool rules
+                        if (version != EthTxVersion::GetNoExec() && val < STANDARD_MINIMUM_GAS_PRICE) {
+                            break;
+                        }
+                    }
+                } catch (const scriptnum_error &err) {
+                    break;
+                }
+            }
+            else if(opcode2 == OP_DATA)
+            {
+                if(0 <= opcode1 && opcode1 <= OP_PUSHDATA4)
+                {
+                    if(vch1.empty())
+                        break;
+                }
+            }
             else if (opcode1 != opcode2 || vch1 != vch2)
             {
                 // Others must match exactly
@@ -176,12 +261,16 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::v
     return false;
 }
 
-bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
+bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet, txnouttype *typeRet)
 {
     std::vector<valtype> vSolutions;
     txnouttype whichType;
     if (!Solver(scriptPubKey, whichType, vSolutions))
         return false;
+
+    if (typeRet) {
+        *typeRet = whichType;
+    }
 
     if (whichType == TX_PUBKEY)
     {

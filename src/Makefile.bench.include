@@ -42,6 +42,7 @@ bench_bench_bitcoinx_LDADD = \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
   $(LIBSECP256K1) \
+  $(LIBCRYPTOPP) \
   $(LIBUNIVALUE)
 
 if ENABLE_ZMQ

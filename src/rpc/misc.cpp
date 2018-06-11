@@ -49,10 +49,8 @@ UniValue getinfo(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() != 0)
         throw std::runtime_error(
             "getinfo\n"
-            "\nDEPRECATED. Returns an object containing various state info.\n"
             "\nResult:\n"
             "{\n"
-            "  \"deprecation-warning\": \"...\" (string) warning that the getinfo command is deprecated and will be removed in 0.16\n"
             "  \"version\": xxxxx,           (numeric) the server version\n"
             "  \"protocolversion\": xxxxx,   (numeric) the protocol version\n"
             "  \"walletversion\": xxxxx,     (numeric) the wallet version\n"
@@ -310,9 +308,9 @@ CScript _createmultisig_redeemScript(CWallet * const pwallet, const UniValue& pa
     }
     CScript result = GetScriptForMultisig(nRequired, pubkeys);
 
-    if (result.size() > MAX_SCRIPT_ELEMENT_SIZE)
+    if (result.size() > ScriptConf::MAX_SCRIPT_ELEMENT_SIZE())
         throw std::runtime_error(
-                strprintf("redeemScript exceeds size limit: %d > %d", result.size(), MAX_SCRIPT_ELEMENT_SIZE));
+                strprintf("redeemScript exceeds size limit: %d > %d", result.size(), ScriptConf::MAX_SCRIPT_ELEMENT_SIZE()));
 
     return result;
 }
