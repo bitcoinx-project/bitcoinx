@@ -51,6 +51,9 @@ CAmount GetDustThreshold(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
 
 bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
 {
+    if (txout.scriptPubKey.HasCreateContractOp() || txout.scriptPubKey.HasSendToContractOp()) {
+        return false;
+    }
     return (txout.nValue < GetDustThreshold(txout, dustRelayFeeIn));
 }
 

@@ -17,6 +17,7 @@
  * in the block is a special one that creates a new coin owned by the creator
  * of the block.
  */
+
 class CBlockHeader
 {
 public:
@@ -66,8 +67,14 @@ public:
     {
         return (int64_t)nTime;
     }
-};
 
+    bool CheckBCXVersion() const
+    {
+        return CheckBCXVersion(nVersion);
+    }
+
+    static bool CheckBCXVersion(int version);
+};
 
 class CBlock : public CBlockHeader
 {

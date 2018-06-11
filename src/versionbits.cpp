@@ -7,18 +7,21 @@
 
 const struct VBDeploymentInfo VersionBitsDeploymentInfo[Consensus::MAX_VERSION_BITS_DEPLOYMENTS] = {
     {
-        /*.name =*/ "testdummy",
-        /*.gbt_force =*/ true,
+        /*.name =*/"testdummy",
+        /*.gbt_force =*/true,
     },
     {
-        /*.name =*/ "csv",
-        /*.gbt_force =*/ true,
+        /*.name =*/"csv",
+        /*.gbt_force =*/true,
     },
     {
-        /*.name =*/ "segwit",
-        /*.gbt_force =*/ true,
-    }
-};
+        /*.name =*/"segwit",
+        /*.gbt_force =*/true,
+    },
+    {
+        /*.name =*/"contract",
+        /*.gbt_force =*/false,
+    }};
 
 ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex* pindexPrev, const Consensus::Params& params, ThresholdConditionCache& cache) const
 {
@@ -214,6 +217,24 @@ uint32_t VersionBitsMask(const Consensus::Params& params, Consensus::DeploymentP
 bool IsVersionBitsActive(const CBlockIndex* pindexPrev, const Consensus::Params& params, Consensus::DeploymentPos pos, VersionBitsCache& cache)
 {
     return VersionBitsState(pindexPrev, params, pos, cache) == THRESHOLD_ACTIVE;
+}
+
+std::string VersionBitsStateName(ThresholdState state)
+{
+    switch (state) {
+    case THRESHOLD_DEFINED:
+        return "defined";
+    case THRESHOLD_STARTED:
+        return "started";
+    case THRESHOLD_LOCKED_IN:
+        return "locked_in";
+    case THRESHOLD_FAILED:
+        return "failed";
+    case THRESHOLD_ACTIVE:
+        return "active";
+    default:
+        return "invalid";
+    }
 }
 
 void VersionBitsCache::Clear()

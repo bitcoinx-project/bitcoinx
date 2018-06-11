@@ -5,8 +5,8 @@
 DIST_SUBDIRS = secp256k1 univalue
 
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
-AM_CXXFLAGS = $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS)
-AM_CPPFLAGS = $(HARDENED_CPPFLAGS)
+AM_CXXFLAGS = $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS) -DETH_FATDB=1
+AM_CPPFLAGS = $(HARDENED_CPPFLAGS) -DBCX_BUILD
 EXTRA_LIBRARIES =
 
 if EMBEDDED_UNIVALUE
@@ -19,10 +19,11 @@ LIBUNIVALUE = $(UNIVALUE_LIBS)
 endif
 
 BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
-BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
+BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS) -I$(srcdir)/contract/evm/utils
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 BITCOIN_INCLUDES += $(UNIVALUE_CFLAGS)
+BITCOIN_INCLUDES += -I$(srcdir)/contract/evm
 
 LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBBITCOIN_COMMON=libbitcoin_common.a
@@ -32,6 +33,7 @@ LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
 LIBBITCOINQT=qt/libbitcoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
+LIBCRYPTOPP=cryptopp/libcryptopp.a
 
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
@@ -219,6 +221,24 @@ libbitcoin_server_a_SOURCES = \
   validation.cpp \
   validationinterface.cpp \
   versionbits.cpp \
+  contract/config.h \
+  contract/contractexecutor.cpp \
+  contract/contractexecutor.h \
+  contract/contractutil.cpp \
+  contract/contractutil.h \
+  contract/ethstate.cpp \
+  contract/ethstate.h \
+  contract/ethtransaction.h \
+  contract/ethtxconverter.cpp \
+  contract/ethtxconverter.h \
+  contract/ethtxversion.h \
+  contract/rpc.cpp \
+  contract/staterootview.cpp \
+  contract/staterootview.h \
+  contract/txexecrecord.cpp \
+  contract/txexecrecord.h \
+  contract/vmlog.cpp \
+  contract/vmlog.h \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ
@@ -247,7 +267,8 @@ libbitcoin_wallet_a_SOURCES = \
 
 # crypto primitives library
 crypto_libbitcoin_crypto_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_CONFIG_INCLUDES)
-crypto_libbitcoin_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+crypto_libbitcoin_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) -fPIC
+crypto_libbitcoin_crypto_a_CFLAGS = $(AM_CXXFLAGS) -fPIC
 crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/aes.cpp \
   crypto/aes.h \
@@ -265,7 +286,22 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sha256.cpp \
   crypto/sha256.h \
   crypto/sha512.cpp \
-  crypto/sha512.h
+  crypto/sha512.h \
+  contract/evm/utils/libscrypt/b64.c \
+  contract/evm/utils/libscrypt/b64.h \
+  contract/evm/utils/libscrypt/crypto-mcf.c \
+  contract/evm/utils/libscrypt/crypto_scrypt-check.c \
+  contract/evm/utils/libscrypt/crypto_scrypt-hash.c \
+  contract/evm/utils/libscrypt/crypto_scrypt-hexconvert.c \
+  contract/evm/utils/libscrypt/crypto_scrypt-hexconvert.h \
+  contract/evm/utils/libscrypt/crypto_scrypt-nosse.c \
+  contract/evm/utils/libscrypt/crypto-scrypt-saltgen.c \
+  contract/evm/utils/libscrypt/libscrypt.h \
+  contract/evm/utils/libscrypt/sha256.c \
+  contract/evm/utils/libscrypt/sha256.h \
+  contract/evm/utils/libscrypt/slowequals.c \
+  contract/evm/utils/libscrypt/slowequals.h \
+  contract/evm/utils/libscrypt/sysendian.h
 
 if EXPERIMENTAL_ASM
 crypto_libbitcoin_crypto_a_SOURCES += crypto/sha256_sse4.cpp
@@ -273,7 +309,7 @@ endif
 
 # consensus: shared between all executables that validate any consensus rules.
 libbitcoin_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libbitcoin_consensus_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libbitcoin_consensus_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) -fPIC
 libbitcoin_consensus_a_SOURCES = \
   amount.h \
   arith_uint256.cpp \
@@ -282,6 +318,8 @@ libbitcoin_consensus_a_SOURCES = \
   consensus/merkle.h \
   consensus/params.h \
   consensus/validation.h \
+  contract/contract.cpp \
+  contract/contract.h \
   hash.cpp \
   hash.h \
   hash_blake2.cpp \
@@ -307,10 +345,11 @@ libbitcoin_consensus_a_SOURCES = \
   utilstrencodings.cpp \
   utilstrencodings.h \
   version.h
-
+  
 # common: shared between bitcoind, and bitcoin-qt and non-server tools
-libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -DBCX_BUILD
 libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libbitcoin_common_a_CFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS) -std=c99
 libbitcoin_common_a_SOURCES = \
   base58.cpp \
   blockchain.cpp \
@@ -329,7 +368,189 @@ libbitcoin_common_a_SOURCES = \
   script/sign.cpp \
   script/standard.cpp \
   warnings.cpp \
+  contract/evm/libdevcore/Base64.cpp \
+  contract/evm/libdevcore/Base64.h \
+  contract/evm/libdevcore/Common.cpp \
+  contract/evm/libdevcore/Common.h \
+  contract/evm/libdevcore/CommonData.cpp \
+  contract/evm/libdevcore/CommonData.h \
+  contract/evm/libdevcore/CommonIO.cpp \
+  contract/evm/libdevcore/CommonIO.h \
+  contract/evm/libdevcore/CommonJS.cpp \
+  contract/evm/libdevcore/CommonJS.h \
+  contract/evm/libdevcore/FileSystem.cpp \
+  contract/evm/libdevcore/FileSystem.h \
+  contract/evm/libdevcore/FixedHash.cpp \
+  contract/evm/libdevcore/FixedHash.h \
+  contract/evm/libdevcore/Guards.cpp \
+  contract/evm/libdevcore/Guards.h \
+  contract/evm/libdevcore/Hash.cpp \
+  contract/evm/libdevcore/Hash.h \
+  contract/evm/libdevcore/Log.cpp \
+  contract/evm/libdevcore/Log.h \
+  contract/evm/libdevcore/MemoryDB.cpp \
+  contract/evm/libdevcore/MemoryDB.h \
+  contract/evm/libdevcore/OverlayDB.cpp \
+  contract/evm/libdevcore/OverlayDB.h \
+  contract/evm/libdevcore/RLP.cpp \
+  contract/evm/libdevcore/RLP.h \
+  contract/evm/libdevcore/SHA3.cpp \
+  contract/evm/libdevcore/SHA3.h \
+  contract/evm/libdevcore/TransientDirectory.cpp \
+  contract/evm/libdevcore/TransientDirectory.h \
+  contract/evm/libdevcore/TrieCommon.cpp \
+  contract/evm/libdevcore/TrieCommon.h \
+  contract/evm/libdevcore/Worker.cpp \
+  contract/evm/libdevcore/Worker.h \
+  contract/evm/libevm/ExtVMFace.cpp \
+  contract/evm/libevm/ExtVMFace.h \
+  contract/evm/libevm/VM.cpp \
+  contract/evm/libevm/VM.h \
+  contract/evm/libevm/VMOpt.cpp \
+  contract/evm/libevm/VMCalls.cpp \
+  contract/evm/libevm/VMFactory.cpp \
+  contract/evm/libevm/VMFactory.h \
+  contract/evm/libevmcore/Instruction.cpp \
+  contract/evm/libevmcore/Instruction.h \
+  contract/evm/libevmcore/Exceptions.h \
+  contract/evm/libevmcore/EVMSchedule.h \
+  contract/evm/libethereum/Account.cpp \
+  contract/evm/libethereum/Defaults.cpp \
+  contract/evm/libethereum/GasPricer.cpp \
+  contract/evm/libethereum/State.cpp \
+  contract/evm/libethcore/ABI.cpp \
+  contract/evm/libethcore/ChainOperationParams.cpp \
+  contract/evm/libethcore/Common.cpp \
+  contract/evm/libethcore/ICAP.cpp \
+  contract/evm/libethcore/Precompiled.cpp \
+  contract/evm/libdevcore/TrieDB.cpp \
+  contract/evm/libdevcrypto/Common.cpp \
+  contract/evm/libdevcrypto/CryptoPP.cpp \
+  contract/evm/libdevcrypto/AES.cpp \
+  contract/evm/libdevcrypto/ECDHE.cpp \
+  contract/evm/libethashseal/GenesisInfo.cpp \
+  contract/evm/libethereum/ChainParams.cpp \
+  contract/evm/libethcore/Transaction.cpp \
+  contract/evm/libethereum/Transaction.cpp \
+  contract/evm/libethereum/Executive.cpp \
+  contract/evm/libethereum/ExtVM.cpp \
+  contract/evm/libethereum/Block.cpp \
+  contract/evm/libethereum/BlockChain.cpp \
+  contract/evm/libethereum/BlockDetails.cpp \
+  contract/evm/libethereum/TransactionQueue.cpp \
+  contract/evm/libethereum/BlockQueue.cpp \
+  contract/evm/libethcore/BlockHeader.cpp \
+  contract/evm/libdevcore/RLP.cpp \
+  contract/evm/libethereum/TransactionReceipt.cpp \
+  contract/evm/libethcore/SealEngine.cpp \
+  contract/evm/libdevcore/TrieHash.cpp \
+  contract/evm/libethereum/GenesisInfo.cpp \
+  contract/evm/libethashseal/Ethash.cpp \
+  contract/evm/libethashseal/EthashCPUMiner.cpp \
+  contract/evm/libethashseal/EthashAux.cpp \
+  contract/evm/libethashseal/EthashProofOfWork.cpp \
+  contract/evm/libethereum/Account.h \
+  contract/evm/libethereum/Defaults.h \
+  contract/evm/libethereum/GasPricer.h \
+  contract/evm/libethereum/State.h \
+  contract/evm/libethcore/ABI.h \
+  contract/evm/libethcore/ChainOperationParams.h \
+  contract/evm/libethcore/Common.h \
+  contract/evm/libethcore/ICAP.h \
+  contract/evm/libethcore/Precompiled.h \
+  contract/evm/libdevcore/TrieDB.h \
+  contract/evm/libdevcrypto/Common.h \
+  contract/evm/libdevcrypto/CryptoPP.h \
+  contract/evm/libdevcrypto/AES.h \
+  contract/evm/libdevcrypto/ECDHE.h \
+  contract/evm/libethashseal/GenesisInfo.h \
+  contract/evm/libethereum/ChainParams.h \
+  contract/evm/libethcore/Transaction.h \
+  contract/evm/libethcore/Exceptions.h \
+  contract/evm/libethereum/Transaction.h \
+  contract/evm/libethereum/Executive.h \
+  contract/evm/libethereum/ExtVM.h \
+  contract/evm/libethereum/Block.h \
+  contract/evm/libethereum/BlockChain.h \
+  contract/evm/libethereum/BlockDetails.h \
+  contract/evm/libethereum/TransactionQueue.h \
+  contract/evm/libethereum/BlockQueue.h \
+  contract/evm/libethcore/BlockHeader.h \
+  contract/evm/libdevcore/RLP.h \
+  contract/evm/libethereum/TransactionReceipt.h \
+  contract/evm/libethcore/SealEngine.h \
+  contract/evm/libdevcore/TrieHash.h \
+  contract/evm/libethereum/GenesisInfo.h \
+  contract/evm/libethashseal/Ethash.h \
+  contract/evm/libethashseal/EthashCPUMiner.h \
+  contract/evm/libethashseal/EthashAux.h \
+  contract/evm/libethashseal/EthashProofOfWork.h \
+  contract/evm/libethash/internal.c \
+  contract/evm/libethash/io.c \
+  contract/evm/libethash/sha3.c \
+  contract/evm/libethash/internal.h \
+  contract/evm/libethash/io.h \
+  contract/evm/libethash/sha3.h \
+  contract/evm/libdevcore/vector_ref.h \
+  contract/evm/libdevcore/Exceptions.h \
+  contract/evm/libdevcore/db.h \
+  contract/evm/libdevcore/concurrent_queue.h \
+  contract/evm/libdevcore/Terminal.h \
+  contract/evm/libethereum/CodeSizeCache.h \
+  contract/evm/libethereum/VerifiedBlock.h \
+  contract/evm/libdevcore/Assertions.h \
+  contract/evm/libdevcore/debugbreak.h \
+  contract/evm/libethereum/GenericMiner.h \
+  contract/evm/libevm/VMFace.h \
+  contract/evm/libethereum/GenericFarm.h \
+  contract/evm/libethereum/Interface.h \
+  contract/evm/libethcore/CommonJS.h \
+  contract/evm/libdevcore/picosha2.h \
+  contract/evm/libevm/VMConfig.h \
+  contract/evm/libethereum/LogFilter.h \
+  contract/evm/libdevcrypto/Exceptions.h \
+  contract/evm/libethashseal/genesis/mainNetwork.cpp \
+  contract/evm/libethashseal/genesis/eip150Test.cpp \
+  contract/evm/libethashseal/genesis/eip158Test.cpp \
+  contract/evm/libethashseal/genesis/frontierTest.cpp \
+  contract/evm/libethashseal/genesis/homesteadTest.cpp \
+  contract/evm/libethashseal/genesis/mainNetworkTest.cpp \
+  contract/evm/libethashseal/genesis/metropolisTest.cpp \
+  contract/evm/libethashseal/genesis/bcxMainNetwork.cpp \
+  contract/evm/libethashseal/genesis/bcxTestNetwork.cpp \
+  contract/evm/libethashseal/genesis/ropsten.cpp \
+  contract/evm/libethashseal/genesis/transitionnetTest.cpp \
+  contract/evm/libethash/ethash.h \
+  contract/evm/libethash/compiler.h \
+  contract/evm/libethash/data_sizes.h \
+  contract/evm/libethash/fnv.h \
+  contract/evm/libethash/mmap.h \
+  contract/evm/libethash/endian.h \
+  contract/evm/libethash/io.h \
+  contract/evm/libethash/ethash.h \
+  contract/evm/libethash/internal.h \
+  contract/evm/libethash/mmap_win32.c \
+  contract/evm/utils/json_spirit/JsonSpiritHeaders.h \
+  contract/evm/utils/json_spirit/json_spirit.h \
+  contract/evm/utils/json_spirit/json_spirit_error_position.h \
+  contract/evm/utils/json_spirit/json_spirit_reader.h \
+  contract/evm/utils/json_spirit/json_spirit_reader_template.h \
+  contract/evm/utils/json_spirit/json_spirit_stream_reader.h \
+  contract/evm/utils/json_spirit/json_spirit_utils.h \
+  contract/evm/utils/json_spirit/json_spirit_value.h \
+  contract/evm/utils/json_spirit/json_spirit_writer.h \
+  contract/evm/utils/json_spirit/json_spirit_writer_template.h \
   $(BITCOIN_CORE_H)
+
+# only added json_spirit so that `make dist` works properly
+
+if TARGET_WINDOWS
+  libbitcoin_common_a_SOURCES += \
+    contract/evm/libethash/io_win32.c \
+    contract/evm/libethash/util_win32.c
+else
+  libbitcoin_common_a_SOURCES += contract/evm/libethash/io_posix.c
+endif
 
 # util: shared between all executables.
 # This library *must* be included to make sure that the glibc
@@ -391,6 +612,7 @@ bitcoinxd_LDADD = \
   $(LIBLEVELDB) \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
+  $(LIBCRYPTOPP) \
   $(LIBSECP256K1)
 
 bitcoinxd_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
@@ -446,7 +668,7 @@ endif
 
 libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) $(RELDFLAGS)
 libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1)
-libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
+libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include $(BITCOIN_INCLUDES) -DBUILD_BITCOIN_INTERNAL
 libbitcoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 endif
@@ -500,6 +722,7 @@ clean-local:
 	-$(MAKE) -C secp256k1 clean
 	-$(MAKE) -C univalue clean
 	-rm -f leveldb/*/*.gcda leveldb/*/*.gcno leveldb/helpers/memenv/*.gcda leveldb/helpers/memenv/*.gcno
+	-rm -f cryptopp/*.o
 	-rm -f config.h
 	-rm -rf test/__pycache__
 
@@ -531,6 +754,8 @@ endif
 if EMBEDDED_LEVELDB
 include Makefile.leveldb.include
 endif
+
+include Makefile.cryptopp.include
 
 if ENABLE_TESTS
 include Makefile.test.include

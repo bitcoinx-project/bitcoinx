@@ -535,7 +535,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     pblock->nNonce = 0;
 
     // NOTE: If at some point we support pre-segwit miners post-segwit-activation, this needs to take segwit support into consideration
-    const bool fPreSegWit = (THRESHOLD_ACTIVE != VersionBitsState(pindexPrev, consensusParams, Consensus::DEPLOYMENT_SEGWIT, versionbitscache));
+    const bool fPreSegWit = !IsVersionBitsActive(pindexPrev, consensusParams, Consensus::DEPLOYMENT_SEGWIT, versionbitscache);
 
     UniValue aCaps(UniValue::VARR); aCaps.push_back("proposal");
 
