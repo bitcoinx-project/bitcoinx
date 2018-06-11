@@ -19,24 +19,28 @@
 #include <string>
 #include <vector>
 
-// Maximum number of bytes pushable to the stack
-static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
+class ScriptConf
+{
+public:
+    // Maximum script length in bytes
+    static unsigned int MAX_SCRIPT_SIZE();
 
-// Maximum number of non-push operations per script
-static const int MAX_OPS_PER_SCRIPT = 201;
+    // Maximum number of bytes pushable to the stack
+    static unsigned int MAX_SCRIPT_ELEMENT_SIZE();
 
-// Maximum number of public keys per multisig
-static const int MAX_PUBKEYS_PER_MULTISIG = 20;
+    // Maximum number of non-push operations per script
+    static const int MAX_OPS_PER_SCRIPT = 201;
 
-// Maximum script length in bytes
-static const int MAX_SCRIPT_SIZE = 10000;
+    // Maximum number of public keys per multisig
+    static const int MAX_PUBKEYS_PER_MULTISIG = 20;
 
-// Maximum number of values on script interpreter stack
-static const int MAX_STACK_SIZE = 1000;
+    // Maximum number of values on script interpreter stack
+    static const int MAX_STACK_SIZE = 1000;
 
-// Threshold for nLockTime: below this value it is interpreted as block number,
-// otherwise as UNIX timestamp.
-static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
+    // Threshold for nLockTime: below this value it is interpreted as block number,
+    // otherwise as UNIX timestamp.
+    static const unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
+};
 
 template <typename T>
 std::vector<unsigned char> ToByteVector(const T& in)
@@ -181,8 +185,16 @@ enum opcodetype
     OP_NOP9 = 0xb8,
     OP_NOP10 = 0xb9,
 
+    // Execute EXT byte code.
+    OP_CREATECONTRACT = 0xc1,
+    OP_SENDTOCONTRACT = 0xc2,
+    OP_SPEND = 0xc3,
 
     // template matching params
+    OP_VERSION = 0xf5,
+    OP_GAS_PRICE = 0xf6,
+    OP_GAS_LIMIT = 0xf7,
+    OP_DATA = 0xf8,
     OP_SMALLINTEGER = 0xfa,
     OP_PUBKEYS = 0xfb,
     OP_PUBKEYHASH = 0xfd,
@@ -321,6 +333,28 @@ public:
     std::vector<unsigned char> getvch() const
     {
         return serialize(m_value);
+    }
+
+    static uint64_t vch_to_uint64(const std::vector<unsigned char>& vch)
+    {
+        if (vch.size() > 8) {
+            throw scriptnum_error("script number overflow");
+        }
+
+        if (vch.empty())
+            return 0;
+
+        uint64_t result = 0;
+        for (size_t i = 0; i != vch.size(); ++i)
+            result |= static_cast<uint64_t>(vch[i]) << 8 * i;
+
+        // If the input vector's most significant byte is 0x80, remove it from
+        // the result's msb and return a negative.
+        if (vch.back() & 0x80)
+            throw scriptnum_error("Negative gas value.");
+        // return -((uint64_t)(result & ~(0x80ULL << (8 * (vch.size() - 1)))));
+
+        return result;
     }
 
     static std::vector<unsigned char> serialize(const int64_t& value)
@@ -633,6 +667,8 @@ public:
      */
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
+    bool IsPayToPubkey() const;
+    bool IsPayToPubkeyHash() const;
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
@@ -644,6 +680,37 @@ public:
     /** Check if the script contains valid OP_CODES */
     bool HasValidOps() const;
 
+    bool HasCreateContractOp() const
+    {
+        if (size() == 0) {
+            return false;
+        }
+
+        if (*begin() == OP_RETURN) {
+            return false;
+        }
+
+        return (*rbegin() == OP_CREATECONTRACT) && (Find(OP_CREATECONTRACT) == 1);
+    }
+    
+    bool HasSendToContractOp() const
+    {
+        if (size() == 0) {
+            return false;
+        }
+
+        if (*begin() == OP_RETURN) {
+            return false;
+        }
+
+        return (*rbegin() == OP_SENDTOCONTRACT) && (Find(OP_SENDTOCONTRACT) == 1);
+    }
+
+    bool HasSpendOp() const
+    {
+        return (size() == 1) && (*begin() == OP_SPEND);
+    }
+
     /**
      * Returns whether the script is guaranteed to fail at execution,
      * regardless of the initial stack. This allows outputs to be pruned
@@ -651,7 +718,7 @@ public:
      */
     bool IsUnspendable() const
     {
-        return (size() > 0 && *begin() == OP_RETURN) || (size() > MAX_SCRIPT_SIZE);
+        return (size() > 0 && *begin() == OP_RETURN) || (size() > ScriptConf::MAX_SCRIPT_SIZE());
     }
 
     void clear()

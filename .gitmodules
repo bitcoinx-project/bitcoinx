@@ -1,0 +1,3 @@
+[submodule "src/contract/evm"]
+	path = src/contract/evm
+	url = https://github.com/bitcoinx-project/cpp-ethereum.git

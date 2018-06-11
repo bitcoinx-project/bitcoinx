@@ -113,3 +113,23 @@ std::string CTransaction::ToString() const
         str += "    " + tx_out.ToString() + "\n";
     return str;
 }
+
+bool CTransaction::HasCreateOrSendOp() const
+{
+    for (const CTxOut& v : vout) {
+        if (v.scriptPubKey.HasCreateContractOp() || v.scriptPubKey.HasSendToContractOp()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CTransaction::HasSpendOp() const
+{
+    for (const CTxIn& i : vin) {
+        if (i.scriptSig.HasSpendOp()) {
+            return true;
+        }
+    }
+    return false;
+}

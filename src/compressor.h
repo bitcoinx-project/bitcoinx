@@ -78,7 +78,7 @@ public:
             return;
         }
         nSize -= nSpecialScripts;
-        if (nSize > MAX_SCRIPT_SIZE) {
+        if (nSize > ScriptConf::MAX_SCRIPT_SIZE()) {
             // Overly long script, replace with a short invalid one
             script << OP_RETURN;
             s.ignore(nSize);

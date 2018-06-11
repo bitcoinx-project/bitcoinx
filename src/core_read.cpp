@@ -90,17 +90,18 @@ CScript ParseScript(const std::string& s)
 // Check that all of the input and output scripts of a transaction contains valid opcodes
 bool CheckTxScriptsSanity(const CMutableTransaction& tx)
 {
+    const unsigned int maxSize = ScriptConf::MAX_SCRIPT_SIZE();
     // Check input scripts for non-coinbase txs
     if (!CTransaction(tx).IsCoinBase()) {
         for (unsigned int i = 0; i < tx.vin.size(); i++) {
-            if (!tx.vin[i].scriptSig.HasValidOps() || tx.vin[i].scriptSig.size() > MAX_SCRIPT_SIZE) {
+            if (!tx.vin[i].scriptSig.HasValidOps() || tx.vin[i].scriptSig.size() > maxSize) {
                 return false;
             }
         }
     }
     // Check output scripts
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
-        if (!tx.vout[i].scriptPubKey.HasValidOps() || tx.vout[i].scriptPubKey.size() > MAX_SCRIPT_SIZE) {
+        if (!tx.vout[i].scriptPubKey.HasValidOps() || tx.vout[i].scriptPubKey.size() > maxSize) {
             return false;
         }
     }
