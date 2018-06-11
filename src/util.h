@@ -319,4 +319,6 @@ template <typename Callable> void TraceThread(const char* name,  Callable func)
 
 std::string CopyrightHolders(const std::string& strPrefix1, const std::string& strPrefix2);
 
+bool CheckHex(const std::string& str);
+
 #endif // BITCOIN_UTIL_H

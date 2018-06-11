@@ -139,17 +139,25 @@ static arith_uint256 ComputeTarget(const CBlockIndex* pindexFirst,
  */
 
 static const CBlockIndex* GetSuitableBlock(const CBlockIndex* pindexLast) {
+    if (pindexLast == nullptr || pindexLast->pprev == nullptr) {
+        return pindexLast;
+    }
+
     const CBlockIndex* nBlocks[3];
     nBlocks[2] = pindexLast;
     nBlocks[1] = pindexLast->pprev;
     nBlocks[0] = nBlocks[1]->pprev;
 
-    if (nBlocks[0]->nTime > nBlocks[2]->nTime) {
-        std::swap(nBlocks[0], nBlocks[2]);
+    if (nBlocks[0] != nullptr) {
+        if (nBlocks[0]->nTime > nBlocks[2]->nTime) {
+            std::swap(nBlocks[0], nBlocks[2]);
+        }
+
+        if (nBlocks[0]->nTime > nBlocks[1]->nTime) {
+            std::swap(nBlocks[0], nBlocks[1]);
+        }
     }
-    if (nBlocks[0]->nTime > nBlocks[1]->nTime) {
-        std::swap(nBlocks[0], nBlocks[1]);
-    }
+
     if (nBlocks[1]->nTime > nBlocks[2]->nTime) {
         std::swap(nBlocks[1], nBlocks[2]);
     }
@@ -180,7 +188,11 @@ uint32_t  GetNextWorkRequiredByDAA(const CBlockIndex* pindexLast, const CBlockHe
 
     // Get the first suitable block of the difficulty interval (1 day)
     const uint32_t nHeight = pindexLast->nHeight;
-    uint32_t nHeightFirstSuitable = nHeight - 720;
+    const int nHeightFirstSuitable = nHeight - 720;
+    if (nHeightFirstSuitable < 0) {
+        return pindexLast->nBits;
+    }
+
     const CBlockIndex* pindexFirstSuitable = GetSuitableBlock(pindexLast->GetAncestor(nHeightFirstSuitable));
     assert(pindexFirstSuitable);
 

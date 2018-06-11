@@ -18,6 +18,7 @@ class CScript;
 class CTransaction;
 class uint256;
 
+typedef std::vector<unsigned char> valtype;
 /** Signature hash types/flags */
 enum
 {
@@ -112,6 +113,10 @@ enum
     // Do we accept signature using SIGHASH_FORKID
     //
     SCRIPT_VERIFY_SIGHASH_FORKID = (1U << 16),
+
+    // Performs the compiled byte code
+    //
+    SCRIPT_EXEC_BYTE_CODE = (1U << 30),
 };
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);
@@ -185,4 +190,5 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
 
 size_t CountWitnessSigOps(const CScript& scriptSig, const CScript& scriptPubKey, const CScriptWitness* witness, unsigned int flags);
 
+bool IsCompressedOrUncompressedPubKey(const valtype &vchPubKey);
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

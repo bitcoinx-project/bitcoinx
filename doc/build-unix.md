@@ -19,7 +19,7 @@ To Build
 
 ```bash
 ./autogen.sh
-./configure # --disable-wallet --without-gui --without-miniupnpc
+./configure # --disable-wallet --without-gui --without-miniupnpc --disable-tests --disable-gui-tests --disable-bench
 make
 make install # optional
 ```

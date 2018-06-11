@@ -7,6 +7,7 @@
 
 #include "chain.h"
 #include <map>
+#include <string>
 
 /** What block version to use for new blocks (pre versionbits) */
 static const int32_t VERSIONBITS_LAST_OLD_BLOCK_VERSION = 4;
@@ -77,15 +78,12 @@ BIP9Stats VersionBitsStatistics(const CBlockIndex* pindexPrev, const Consensus::
 int VersionBitsStateSinceHeight(const CBlockIndex* pindexPrev, const Consensus::Params& params, Consensus::DeploymentPos pos, VersionBitsCache& cache);
 uint32_t VersionBitsMask(const Consensus::Params& params, Consensus::DeploymentPos pos);
 bool IsVersionBitsActive(const CBlockIndex* pindexPrev, const Consensus::Params& params, Consensus::DeploymentPos pos, VersionBitsCache& cache);
+std::string VersionBitsStateName(ThresholdState state);
 
 /** What bitmask determines whether bitcoinx hard fork is in use */
 static const int32_t VERSIONBITS_BCX_MASK = 0x12000000UL;
+/** What bits to set in version for bitcoinx contract (1 << 2) */
+static const int32_t VERSIONBITS_BCX_CONTRACT_BITS = 0x00000004UL;
 
-static inline bool CheckBCXVersion(int nVersion)
-{
-    static const int BCX_BIT = 24;
-    return (nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS
-        && (nVersion >> BCX_BIT) == ((VERSIONBITS_TOP_BITS | VERSIONBITS_BCX_MASK) >> BCX_BIT);
-}
 
 #endif

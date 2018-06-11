@@ -975,6 +975,10 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
     return hashTx.GetHex();
 }
 
+// in contract/rpc.cpp
+extern UniValue gethexaddress(const JSONRPCRequest& request);
+extern UniValue fromhexaddress(const JSONRPCRequest& request);
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
@@ -988,6 +992,9 @@ static const CRPCCommand commands[] =
 
     { "blockchain",         "gettxoutproof",          &gettxoutproof,          true,  {"txids", "blockhash"} },
     { "blockchain",         "verifytxoutproof",       &verifytxoutproof,       true,  {"proof"} },
+
+    { "contract",           "gethexaddress",          &gethexaddress,          true,  {"address"} },
+    { "contract",           "fromhexaddress",         &fromhexaddress,         true,  {"hexaddress"} },
 };
 
 void RegisterRawTransactionRPCCommands(CRPCTable &t)
