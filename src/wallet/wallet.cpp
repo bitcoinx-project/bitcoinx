@@ -569,6 +569,12 @@ void CWallet::SyncMetaData(std::pair<TxSpends::iterator, TxSpends::iterator> ran
             copyFrom = &mapWallet[hash];
         }
     }
+
+    if (copyFrom == nullptr)
+    {
+        return;
+    }
+
     // Now copy data from copyFrom to rest:
     for (TxSpends::iterator it = range.first; it != range.second; ++it)
     {

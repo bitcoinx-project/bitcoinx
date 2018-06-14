@@ -1214,13 +1214,13 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
 
-    if (fPruneMode)
+    if (fPruneMode && chainActive.Tip())
     {
         CBlockIndex *block = chainActive.Tip();
-        while (block && block->pprev && (block->pprev->nStatus & BLOCK_HAVE_DATA))
+        while (block->pprev && (block->pprev->nStatus & BLOCK_HAVE_DATA))
             block = block->pprev;
 
-        obj.push_back(Pair("pruneheight",        block->nHeight));
+        obj.push_back(Pair("pruneheight", block->nHeight));
     }
     return obj;
 }
@@ -1590,12 +1590,12 @@ static const CRPCCommand commands[] =
     { "blockchain",         "preciousblock",          &preciousblock,          true,  {"blockhash"} },
 
     { "contract",           "callcontract",           &callcontract,           true,  {"address","data"} },
-    { "contract",           "listcontracts",          &listcontracts,          true,  {"start","maxDisplay"} }, 
+    { "contract",           "listcontracts",          &listcontracts,          true,  {"start","maxDisplay"} },
     { "contract",           "getcontractinfo",        &getcontractinfo,        true,  {"contract_address"} },
     { "contract",           "getcontractstorage",     &getcontractstorage,     true,  {"address, blockNum, index"} },
-  	{ "contract",         	"searchexecrecord",       &searchexecrecord,       true,  {"fromBlock", "toBlock", "address", "topics"} },
-   	{ "contract",         	"waitforexecrecord",      &waitforexecrecord,      true,  {"fromBlock", "nblocks", "address", "topics"} },
-	{ "contract",           "getexecrecord",          &getexecrecord,          true,  {"hash"} },
+    { "contract",           "searchexecrecord",       &searchexecrecord,       true,  {"fromBlock", "toBlock", "address", "topics"} },
+    { "contract",           "waitforexecrecord",      &waitforexecrecord,      true,  {"fromBlock", "nblocks", "address", "topics"} },
+    { "contract",           "getexecrecord",          &getexecrecord,          true,  {"hash"} },
 
     /* Not shown in help */
     { "hidden",             "invalidateblock",        &invalidateblock,        true,  {"blockhash"} },
