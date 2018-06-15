@@ -170,7 +170,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     originalRewardTx = coinbaseTx;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
 
-    // 
+    //
     EthState::Instance()->SetEngineSchedule();
     minGasPrice = MIN_GAS_PRICE;
     if(gArgs.IsArgSet("-staker-min-tx-gas-price")) {
