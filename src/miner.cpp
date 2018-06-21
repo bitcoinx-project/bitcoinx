@@ -31,6 +31,12 @@
 #include <queue>
 #include <utility>
 
+#include "contract/config.h"
+#include "contract/ethstate.h"
+#include "contract/ethtransaction.h"
+#include "contract/ethtxconverter.h"
+#include "contract/contractexecutor.h"
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // BitcoinMiner
@@ -148,10 +154,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // transaction (which in most cases can be a no-op).
     fIncludeWitness = IsWitnessEnabled(pindexPrev, chainparams.GetConsensus()) && fMineWitnessTx;
 
-    int nPackagesSelected = 0;
-    int nDescendantsUpdated = 0;
-    addPackageTxs(nPackagesSelected, nDescendantsUpdated);
-
     int64_t nTime1 = GetTimeMicros();
 
     nLastBlockTx = nBlockTx;
@@ -165,7 +167,37 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+    originalRewardTx = coinbaseTx;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+
+    //
+    EthState::Instance()->SetEngineSchedule();
+    minGasPrice = MIN_GAS_PRICE;
+    if(gArgs.IsArgSet("-staker-min-tx-gas-price")) {
+        CAmount stakerMinGasPrice;
+        if(ParseMoney(gArgs.GetArg("-staker-min-tx-gas-price", ""), stakerMinGasPrice)) {
+            minGasPrice = std::max(minGasPrice, (uint64_t)stakerMinGasPrice);
+        }
+    }
+    hardBlockGasLimit = DEFAULT_BLOCK_GAS_LIMIT;
+    softBlockGasLimit = gArgs.GetArg("-staker-soft-block-gas-limit", hardBlockGasLimit);
+    softBlockGasLimit = std::min(softBlockGasLimit, hardBlockGasLimit);
+    txGasLimit = gArgs.GetArg("-staker-max-tx-gas-limit", softBlockGasLimit);
+
+    dev::h256 oldHashStateRoot(EthState::Instance()->rootHash());
+    dev::h256 oldHashUTXORoot(EthState::Instance()->rootHashUTXO());
+
+    int nPackagesSelected = 0;
+    int nDescendantsUpdated = 0;
+    addPackageTxs(minGasPrice, nPackagesSelected, nDescendantsUpdated);
+
+    EthState::Instance()->setRoot(oldHashStateRoot);
+    EthState::Instance()->setUTXORoot(oldHashUTXORoot);
+
+    // This should already be populated by AddBlock in case of contracts, but if no contracts
+    // Then it won't get populated
+    RebuildRefundTransaction();
+
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
     pblocktemplate->vTxFees[0] = -nFees;
 
@@ -247,6 +279,147 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
     }
 }
 
+bool BlockAssembler::TryToAddContractToBlock(CTxMemPool::txiter iter, uint64_t minGasPrice)
+{
+    // Check contract active.
+    if (!IsContractEnabled(chainActive.Tip(), chainparams.GetConsensus())) {
+        return false;
+    }
+
+    dev::h256 oldHashStateRoot(EthState::Instance()->rootHash());
+    dev::h256 oldHashUTXORoot(EthState::Instance()->rootHashUTXO());
+    // Operate on local vars first, then later apply to `this`
+    uint64_t blockWeight = nBlockWeight;
+    uint64_t blockSigOpsCost = nBlockSigOpsCost;
+
+    std::vector<EthTransaction> ethTxs;
+    EthTxConverter converter(iter->GetTx(), NULL, &pblock->vtx);
+    if (!converter.Convert(ethTxs)) {
+        // This check already happens when accepting txs into mempool
+        // Therefore, this can only be triggered by using raw transactions on the staker itself
+        return false;
+    }
+    dev::u256 txGas = 0;
+    for (const EthTransaction &ethTx : ethTxs) {
+        txGas += ethTx.gas();
+        if (txGas > txGasLimit) {
+            // Limit the tx gas limit by the soft limit if such a limit has been specified.
+            return false;
+        }
+
+        if (contractExeResult.totalGasUsed + ethTx.gas() > softBlockGasLimit) {
+            // If this transaction's gasLimit could cause block gas limit to be exceeded, then don't add it
+            return false;
+        }
+        if (ethTx.gasPrice() < minGasPrice) {
+            // If this transaction's gasPrice is less than the current minGasPrice don't add it
+            return false;
+        }
+    }
+    // We need to pass the block gas limit (not the soft limit) since it is consensus critical.
+    ContractExecutor executor(*pblock, ethTxs, hardBlockGasLimit);
+    if (!executor.Execut()) {
+        // Error, don't add contract
+        EthState::Instance()->setRoot(oldHashStateRoot);
+        EthState::Instance()->setUTXORoot(oldHashUTXORoot);
+        return false;
+    }
+
+    ExecutionResult testcontractExeResult;
+    if (!executor.GetResult(testcontractExeResult)) {
+        EthState::Instance()->setRoot(oldHashStateRoot);
+        EthState::Instance()->setUTXORoot(oldHashUTXORoot);
+        return false;
+    }
+
+    if (contractExeResult.totalGasUsed + testcontractExeResult.totalGasUsed > softBlockGasLimit) {
+        // If this transaction could cause block gas limit to be exceeded, then don't add it
+        EthState::Instance()->setRoot(oldHashStateRoot);
+        EthState::Instance()->setUTXORoot(oldHashUTXORoot);
+        return false;
+    }
+
+    // Apply contractTx costs to local state
+    blockWeight += iter->GetTxWeight();
+    blockSigOpsCost += iter->GetSigOpCost();
+    // Apply value-transfer txs to local state
+    for (const CTransaction& tx : testcontractExeResult.transferTxs) {
+        blockWeight += GetTransactionWeight(tx);
+        blockSigOpsCost += GetLegacySigOpCount(tx);
+    }
+
+    // Calculate sigops from new refund/proof tx
+
+    // First, subtract old proof tx
+    blockSigOpsCost -= GetLegacySigOpCount(*pblock->vtx[0]);
+
+    // Manually rebuild refundtx
+    CMutableTransaction contrTx(*pblock->vtx[0]);
+    // Note, this will need changed for MPoS
+    int i = contrTx.vout.size();
+    contrTx.vout.resize(contrTx.vout.size() + testcontractExeResult.refundTxOuts.size());
+    for (CTxOut& vout : testcontractExeResult.refundTxOuts) {
+        contrTx.vout[i] = vout;
+        i++;
+    }
+    blockSigOpsCost += GetLegacySigOpCount(contrTx);
+    // All contract costs now applied to local state
+
+    // Check if block will be too big or too expensive with this contract execution
+    if (blockSigOpsCost * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST) {
+        // Contract will not be added to block, so revert state to before we tried
+        EthState::Instance()->setRoot(oldHashStateRoot);
+        EthState::Instance()->setUTXORoot(oldHashUTXORoot);
+        return false;
+    }
+
+    // Block is not too big, so apply the contract execution and it's results to the actual block
+
+    // Apply local bytecode to global bytecode state
+    contractExeResult.totalGasUsed += testcontractExeResult.totalGasUsed;
+    contractExeResult.totalRefund += testcontractExeResult.totalRefund;
+    contractExeResult.refundTxOuts.insert(contractExeResult.refundTxOuts.end(), testcontractExeResult.refundTxOuts.begin(), testcontractExeResult.refundTxOuts.end());
+    contractExeResult.transferTxs = std::move(testcontractExeResult.transferTxs);
+
+    pblock->vtx.emplace_back(iter->GetSharedTx());
+    pblocktemplate->vTxFees.push_back(iter->GetFee());
+    pblocktemplate->vTxSigOpsCost.push_back(iter->GetSigOpCost());
+    nBlockWeight += iter->GetTxWeight();
+    ++nBlockTx;
+    nBlockSigOpsCost += iter->GetSigOpCost();
+    nFees += iter->GetFee();
+    inBlock.insert(iter);
+
+    for (const CTransaction& tx : contractExeResult.transferTxs) {
+        pblock->vtx.emplace_back(MakeTransactionRef(std::move(tx)));
+        nBlockWeight += GetTransactionWeight(tx);
+        nBlockSigOpsCost += GetLegacySigOpCount(tx);
+        ++nBlockTx;
+    }
+    // Calculate sigops from new refund/proof tx
+    nBlockSigOpsCost -= GetLegacySigOpCount(*pblock->vtx[0]);
+    RebuildRefundTransaction();
+    nBlockSigOpsCost += GetLegacySigOpCount(*pblock->vtx[0]);
+
+    contractExeResult.transferTxs.clear();
+
+    return true;
+}
+
+void BlockAssembler::RebuildRefundTransaction()
+{
+    CMutableTransaction contrTx(originalRewardTx);
+    contrTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    contrTx.vout[0].nValue -= contractExeResult.totalRefund;
+    int i = contrTx.vout.size();
+    contrTx.vout.resize(contrTx.vout.size() + contractExeResult.refundTxOuts.size());
+    for (CTxOut& vout : contractExeResult.refundTxOuts) {
+        contrTx.vout[i] = vout;
+        i++;
+    }
+    pblock->vtx[0] = MakeTransactionRef(std::move(contrTx));
+}
+
 int BlockAssembler::UpdatePackagesForAdded(const CTxMemPool::setEntries& alreadyAdded,
         indexed_modified_transaction_set &mapModifiedTx)
 {
@@ -310,7 +483,7 @@ void BlockAssembler::SortForBlock(const CTxMemPool::setEntries& package, CTxMemP
 // Each time through the loop, we compare the best transaction in
 // mapModifiedTxs with the next transaction in the mempool to decide what
 // transaction package to work on next.
-void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpdated)
+void BlockAssembler::addPackageTxs(uint64_t minGasPrice, int &nPackagesSelected, int &nDescendantsUpdated)
 {
     // mapModifiedTx will store sorted packages after they are modified
     // because some of their txs are already in the block
@@ -322,7 +495,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     // and modifying them for their already included ancestors
     UpdatePackagesForAdded(inBlock, mapModifiedTx);
 
-    CTxMemPool::indexed_transaction_set::index<ancestor_score>::type::iterator mi = mempool.mapTx.get<ancestor_score>().begin();
+    CTxMemPool::indexed_transaction_set::index<ancestor_score_or_gas_price>::type::iterator mi = mempool.mapTx.get<ancestor_score_or_gas_price>().begin();
     CTxMemPool::txiter iter;
 
     // Limit the number of attempts to add transactions to the block when it is
@@ -331,10 +504,10 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     const int64_t MAX_CONSECUTIVE_FAILURES = 1000;
     int64_t nConsecutiveFailed = 0;
 
-    while (mi != mempool.mapTx.get<ancestor_score>().end() || !mapModifiedTx.empty())
+    while (mi != mempool.mapTx.get<ancestor_score_or_gas_price>().end() || !mapModifiedTx.empty())
     {
         // First try to find a new transaction in mapTx to evaluate.
-        if (mi != mempool.mapTx.get<ancestor_score>().end() &&
+        if (mi != mempool.mapTx.get<ancestor_score_or_gas_price>().end() &&
                 SkipMapTxEntry(mempool.mapTx.project<0>(mi), mapModifiedTx, failedTx)) {
             ++mi;
             continue;
@@ -344,15 +517,15 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         // the next entry from mapTx, or the best from mapModifiedTx?
         bool fUsingModified = false;
 
-        modtxscoreiter modit = mapModifiedTx.get<ancestor_score>().begin();
-        if (mi == mempool.mapTx.get<ancestor_score>().end()) {
+        modtxscoreiter modit = mapModifiedTx.get<ancestor_score_or_gas_price>().begin();
+        if (mi == mempool.mapTx.get<ancestor_score_or_gas_price>().end()) {
             // We're out of entries in mapTx; use the entry from mapModifiedTx
             iter = modit->iter;
             fUsingModified = true;
         } else {
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
-            if (modit != mapModifiedTx.get<ancestor_score>().end() &&
+            if (modit != mapModifiedTx.get<ancestor_score_or_gas_price>().end() &&
                     CompareModifiedEntry()(*modit, CTxMemPoolModifiedEntry(iter))) {
                 // The best entry in mapModifiedTx has higher score
                 // than the one from mapTx.
@@ -389,7 +562,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
                 // Since we always look at the best entry in mapModifiedTx,
                 // we must erase failed entries so that we can consider the
                 // next best entry on the next loop iteration
-                mapModifiedTx.get<ancestor_score>().erase(modit);
+                mapModifiedTx.get<ancestor_score_or_gas_price>().erase(modit);
                 failedTx.insert(iter);
             }
 
@@ -414,7 +587,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         // Test if all tx's are Final
         if (!TestPackageTransactions(ancestors)) {
             if (fUsingModified) {
-                mapModifiedTx.get<ancestor_score>().erase(modit);
+                mapModifiedTx.get<ancestor_score_or_gas_price>().erase(modit);
                 failedTx.insert(iter);
             }
             continue;
@@ -427,10 +600,36 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
         std::vector<CTxMemPool::txiter> sortedEntries;
         SortForBlock(ancestors, iter, sortedEntries);
 
-        for (size_t i=0; i<sortedEntries.size(); ++i) {
-            AddToBlock(sortedEntries[i]);
+        bool wasAdded = true;
+        for (size_t i = 0; i < sortedEntries.size(); ++i) {
+            if (!wasAdded) {
+                // If earlier ancestor failed, then skip the rest of the transactions
+                mapModifiedTx.erase(sortedEntries[i]);
+                wasAdded = false;
+                continue;
+            }
+            const CTransaction& tx = sortedEntries[i]->GetTx();
+            if (wasAdded) {
+                if (tx.HasCreateOrSendOp()) {
+                    wasAdded = TryToAddContractToBlock(sortedEntries[i], minGasPrice);
+                    if (!wasAdded) {
+                        if (fUsingModified) {
+                            // This only needs to be done once to mark the whole package (everything in sortedEntries) as failed
+                            mapModifiedTx.get<ancestor_score_or_gas_price>().erase(modit);
+                            failedTx.insert(iter);
+                        }
+                    }
+                } else {
+                    AddToBlock(sortedEntries[i]);
+                }
+            }
             // Erase from the modified set, if present
             mapModifiedTx.erase(sortedEntries[i]);
+        }
+
+        if(!wasAdded){
+            // Skip UpdatePackages if a transaction failed to be added (match TestPackage logic)
+            continue;
         }
 
         ++nPackagesSelected;

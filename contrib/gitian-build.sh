@@ -18,8 +18,8 @@ SIGNER=
 VERSION=
 commit=false
 url=https://github.com/bitcoinx-project/bitcoinx
-proc=2
-mem=2000
+proc=4
+mem=16000
 lxc=true
 osslTarUrl=http://downloads.sourceforge.net/project/osslsigncode/osslsigncode/osslsigncode-1.7.1.tar.gz
 osslPatchUrl=https://bcx.org/cfields/osslsigncode-Backports-to-1.7.1.patch
@@ -272,7 +272,7 @@ then
             echo ""
 	    echo "Compiling ${VERSION} Linux"
 	    echo ""
-	    ./bin/gbuild -j ${proc} -m ${mem} --commit bitcoinx=${COMMIT} --url bitcoin=${url} ../bitcoinx/contrib/gitian-descriptors/gitian-linux.yml
+	    ./bin/gbuild -j ${proc} -m ${mem} --commit bitcoinx=${COMMIT} --url bitcoinx=${url} ../bitcoinx/contrib/gitian-descriptors/gitian-linux.yml
 	    ./bin/gsign -p $signProg --signer $SIGNER --release ${VERSION}-linux --destination ../gitian.sigs/ ../bitcoinx/contrib/gitian-descriptors/gitian-linux.yml
 	    mv build/out/bitcoinx-*.tar.gz build/out/src/bitcoinx-*.tar.gz ../bitcoinx-binaries/${VERSION}
 	fi

@@ -15,11 +15,18 @@
 
 uint256 CBlockHeader::GetHash() const
 {
-    if (CheckBCXVersion(nVersion))
+    if (CheckBCXVersion())
     {
         return Blake2::SerializeHash(*this);    
     }
     return SerializeHash(*this);
+}
+
+bool CBlockHeader::CheckBCXVersion(int version)
+{
+    static const int BCX_BIT = 24;
+    return (version & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS
+        && (version >> BCX_BIT) == ((VERSIONBITS_TOP_BITS | VERSIONBITS_BCX_MASK) >> BCX_BIT);
 }
 
 std::string CBlock::ToString() const

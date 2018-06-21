@@ -848,13 +848,11 @@ UniValue signrawtransaction(const JSONRPCRequest& request)
             {std::string("SINGLE|ANYONECANPAY|FORKID"), int(SIGHASH_SINGLE|SIGHASH_ANYONECANPAY|SIGHASH_FORKID)},
         };
         std::string strHashType = request.params[3].get_str();
-        if (mapSigHashValues.count(strHashType))
-            nHashType = mapSigHashValues[strHashType];
-        else
+        if (mapSigHashValues.count(strHashType) == 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid sighash param");
 
         nHashType = mapSigHashValues[strHashType];
-        if ((nHashType & SIGHASH_FORKID) == 0) 
+        if ((nHashType & SIGHASH_FORKID) == 0)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Signature must use SIGHASH_FORKID");
     }
 
@@ -975,6 +973,10 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
     return hashTx.GetHex();
 }
 
+// in contract/rpc.cpp
+extern UniValue gethexaddress(const JSONRPCRequest& request);
+extern UniValue fromhexaddress(const JSONRPCRequest& request);
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
@@ -988,6 +990,9 @@ static const CRPCCommand commands[] =
 
     { "blockchain",         "gettxoutproof",          &gettxoutproof,          true,  {"txids", "blockhash"} },
     { "blockchain",         "verifytxoutproof",       &verifytxoutproof,       true,  {"proof"} },
+
+    { "contract",           "gethexaddress",          &gethexaddress,          true,  {"address"} },
+    { "contract",           "fromhexaddress",         &fromhexaddress,         true,  {"hexaddress"} },
 };
 
 void RegisterRawTransactionRPCCommands(CRPCTable &t)

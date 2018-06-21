@@ -34,17 +34,8 @@
 #include <mutex>
 #include <condition_variable>
 
-struct CUpdatedBlock
-{
-    uint256 hash;
-    int height;
-};
-
-static std::mutex cs_blockchange;
-static std::condition_variable cond_blockchange;
-static CUpdatedBlock latestblock;
-
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
+
 
 double GetDifficultyBCX(const CBlockIndex* blockindex)
 {
@@ -1223,13 +1214,13 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
     obj.push_back(Pair("softforks",             softforks));
     obj.push_back(Pair("bip9_softforks", bip9_softforks));
 
-    if (fPruneMode)
+    if (fPruneMode && chainActive.Tip())
     {
         CBlockIndex *block = chainActive.Tip();
-        while (block && block->pprev && (block->pprev->nStatus & BLOCK_HAVE_DATA))
+        while (block->pprev && (block->pprev->nStatus & BLOCK_HAVE_DATA))
             block = block->pprev;
 
-        obj.push_back(Pair("pruneheight",        block->nHeight));
+        obj.push_back(Pair("pruneheight", block->nHeight));
     }
     return obj;
 }
@@ -1565,6 +1556,15 @@ UniValue getchaintxstats(const JSONRPCRequest& request)
     return ret;
 }
 
+// in contract/rpc.cpp
+extern UniValue callcontract(const JSONRPCRequest& request);
+extern UniValue listcontracts(const JSONRPCRequest& request);
+extern UniValue getcontractinfo(const JSONRPCRequest& request);
+extern UniValue getcontractstorage(const JSONRPCRequest& request);
+extern UniValue waitforexecrecord(const JSONRPCRequest& request_);
+extern UniValue searchexecrecord(const JSONRPCRequest& request);
+extern UniValue getexecrecord(const JSONRPCRequest& request);
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafe argNames
   //  --------------------- ------------------------  -----------------------  ------ ----------
@@ -1589,12 +1589,21 @@ static const CRPCCommand commands[] =
 
     { "blockchain",         "preciousblock",          &preciousblock,          true,  {"blockhash"} },
 
+    { "contract",           "callcontract",           &callcontract,           true,  {"address","data"} },
+    { "contract",           "listcontracts",          &listcontracts,          true,  {"start","maxDisplay"} },
+    { "contract",           "getcontractinfo",        &getcontractinfo,        true,  {"contract_address"} },
+    { "contract",           "getcontractstorage",     &getcontractstorage,     true,  {"address, blockNum, index"} },
+    { "contract",           "searchexecrecord",       &searchexecrecord,       true,  {"fromBlock", "toBlock", "address", "topics"} },
+    { "contract",           "waitforexecrecord",      &waitforexecrecord,      true,  {"fromBlock", "nblocks", "address", "topics"} },
+    { "contract",           "getexecrecord",          &getexecrecord,          true,  {"hash"} },
+
     /* Not shown in help */
     { "hidden",             "invalidateblock",        &invalidateblock,        true,  {"blockhash"} },
     { "hidden",             "reconsiderblock",        &reconsiderblock,        true,  {"blockhash"} },
     { "hidden",             "waitfornewblock",        &waitfornewblock,        true,  {"timeout"} },
     { "hidden",             "waitforblock",           &waitforblock,           true,  {"blockhash","timeout"} },
     { "hidden",             "waitforblockheight",     &waitforblockheight,     true,  {"height","timeout"} },
+
 };
 
 void RegisterBlockchainRPCCommands(CRPCTable &t)
@@ -1602,3 +1611,4 @@ void RegisterBlockchainRPCCommands(CRPCTable &t)
     for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
         t.appendCommand(commands[vcidx].name, &commands[vcidx]);
 }
+
