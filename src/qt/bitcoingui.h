@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_QT_BITCOINGUI_H
-#define BITCOIN_QT_BITCOINGUI_H
+#ifndef BITCOINX_QT_BITCOINGUI_H
+#define BITCOINX_QT_BITCOINGUI_H
 
 #if defined(HAVE_CONFIG_H)
 #include "config/bitcoin-config.h"
@@ -17,7 +17,9 @@
 #include <QMenu>
 #include <QPoint>
 #include <QSystemTrayIcon>
-
+#include <QVBoxLayout>
+#include <QDockWidget>
+#include <iostream>
 class ClientModel;
 class NetworkStyle;
 class Notificator;
@@ -30,12 +32,18 @@ class WalletFrame;
 class WalletModel;
 class HelpMessageDialog;
 class ModalOverlay;
+class TitleBar;
+class NavigationBar;
+class CWallet;
 
 QT_BEGIN_NAMESPACE
 class QAction;
 class QProgressBar;
 class QProgressDialog;
+class QDockWidget;
 QT_END_NAMESPACE
+
+typedef CWallet* CWalletRef;
 
 /**
   Bitcoin GUI main class. This class represents the main window of the Bitcoin UI. It communicates with both the client and
@@ -86,10 +94,14 @@ private:
     QLabel *connectionsControl;
     QLabel *labelBlocksIcon;
     QLabel *progressBarLabel;
+    QLabel *labelStakingIcon;
     QProgressBar *progressBar;
     QProgressDialog *progressDialog;
 
     QMenuBar *appMenuBar;
+    TitleBar *appTitleBar;
+    NavigationBar *appNavigationBar;
+    QToolBar *toolbar;
     QAction *overviewAction;
     QAction *historyAction;
     QAction *quitAction;
@@ -106,11 +118,16 @@ private:
     QAction *toggleHideAction;
     QAction *encryptWalletAction;
     QAction *backupWalletAction;
+    QAction *restoreWalletAction;
     QAction *changePassphraseAction;
+    QAction *unlockWalletAction;
+    QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
     QAction *openAction;
     QAction *showHelpMessageAction;
+    QAction* smartContractAction;
+    QAction* QRCTokenAction;
 
     QSystemTrayIcon *trayIcon;
     QMenu *trayIconMenu;
@@ -118,6 +135,7 @@ private:
     RPCConsole *rpcConsole;
     HelpMessageDialog *helpMessageDialog;
     ModalOverlay *modalOverlay;
+    //ModalOverlay *modalBackupOverlay;
 
     /** Keep track of previous number of blocks, to detect progress */
     int prevBlocks;
@@ -125,12 +143,17 @@ private:
 
     const PlatformStyle *platformStyle;
 
+    /** Current weight of the wallet */
+    //uint64_t nWeight;
+
     /** Create the main UI actions. */
     void createActions();
     /** Create the menu bar and sub-menus. */
     void createMenuBar();
     /** Create the toolbars */
     void createToolBars();
+    /** Create title bar */
+    void createTitleBars();
     /** Create system tray icon and notification */
     void createTrayIcon(const NetworkStyle *networkStyle);
     /** Create system tray menu (or setup the dock menu) */
@@ -148,6 +171,9 @@ private:
     void updateNetworkState();
 
     void updateHeadersSyncProgressLabel();
+
+    /** Add docking windows to the main windows */
+    void addDockWindows(Qt::DockWidgetArea area, QWidget* widget);
 
 Q_SIGNALS:
     /** Signal raised when a URI was entered or dragged to the GUI */
@@ -187,7 +213,13 @@ public Q_SLOTS:
 
     /** Show incoming transaction notification for new transactions. */
     void incomingTransaction(const QString& date, int unit, const CAmount& amount, const QString& type, const QString& address, const QString& label);
+
+    /** Show incoming transaction notification for new token transactions. */
+    void incomingTokenTransaction(const QString& date, const QString& amount, const QString& type, const QString& address, const QString& label, const QString& title);
 #endif // ENABLE_WALLET
+
+    void setTabBarInfo(QObject* into);
+
 
 private Q_SLOTS:
 #ifdef ENABLE_WALLET
@@ -199,7 +231,10 @@ private Q_SLOTS:
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage(QString addr = "");
-
+    /** Switch to create contract page */
+    void gotoContractPage();
+    /** Switch to Send Token page */
+    void gotoTokenPage();
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
@@ -227,13 +262,15 @@ private Q_SLOTS:
     void showNormalIfMinimized(bool fToggleHidden = false);
     /** Simply calls showNormalIfMinimized(true) for use in SLOT() macro */
     void toggleHidden();
+    /** Update staking icon **/
+    //void updateStakingIcon();
 
     /** called by a timer to check if fRequestShutdown has been set **/
     void detectShutdown();
 
     /** Show progress dialog e.g. for verifychain */
     void showProgress(const QString &title, int nProgress);
-    
+
     /** When hideTrayIcon setting is changed in OptionsModel hide or show the icon accordingly. */
     void setTrayIconVisible(bool);
 
@@ -241,6 +278,12 @@ private Q_SLOTS:
     void toggleNetworkActive();
 
     void showModalOverlay();
+
+    //void showModalBackupOverlay();
+
+private:
+    /** Update the current weight of the wallet **/
+    //void updateWeight(CWalletRef pwalletMain);
 };
 
 class UnitDisplayStatusBarControl : public QLabel
@@ -272,4 +315,4 @@ private Q_SLOTS:
     void onMenuSelection(QAction* action);
 };
 
-#endif // BITCOIN_QT_BITCOINGUI_H
+#endif // BITCOINX_QT_BITCOINGUI_H

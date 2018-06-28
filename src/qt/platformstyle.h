@@ -38,6 +38,21 @@ public:
 
     /** Colorize an icon (given object) with the text color */
     QIcon TextColorIcon(const QIcon& icon) const;
+    enum StateType{
+        NavBar = 0,
+        PushButton = 1
+    };
+ QIcon MultiStatesIcon(const QString& resourcename, StateType type = NavBar, QColor color = Qt::white, QColor colorAlt = 0x2d2d2d) const;
+    enum TableColorType{
+        Normal = 0,
+        Input,
+        Inout,
+        Output,
+        Error
+    };
+    QIcon TableColorIcon(const QString& resourcename, TableColorType type) const;
+    QImage TableColorImage(const QString& resourcename, TableColorType type) const;
+    void TableColor(TableColorType type, int& color, double& opacity) const;
 
 private:
     PlatformStyle(const QString &name, bool imagesOnButtons, bool colorizeIcons, bool useExtraSpacing);

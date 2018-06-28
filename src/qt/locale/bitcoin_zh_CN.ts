@@ -551,6 +551,59 @@
         <source>A fatal error occurred. BitcoinX can no longer continue safely and will quit.</source>
         <translation>发生严重错误。客户端无法安全地继续运行，即将退出。</translation>
     </message>
+    <message>
+        <source>Smart Contracts</source>
+        <translation>智能合约</translation>
+    </message>
+    <message>
+        <source>Create</source>
+        <translation>发布</translation>
+    </message>
+    <message>
+        <source>Create a new contract</source>
+        <translation>发布新的合约</translation>
+    </message>
+    <message>
+        <source>Send To</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <source>Call pay function</source>
+        <translation>调用付费函数</translation>
+    </message>
+    <message>
+        <source>Call</source>
+        <translation>调用</translation>
+    </message>
+    <message>
+        <source>Call free function</source>
+        <translation>调用免费函数</translation>
+    </message>
+    <message>
+        <source>Tokens</source>
+        <translation>代币</translation>
+    </message>
+    <message>
+        <source>Send</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <source>Send tokens to an address</source>
+        <translation>向地址发送代币</translation>
+    </message>
+    <message>
+        <source>Receive</source>
+        <translation>接收</translation>
+    </message>
+    <message>
+        <source>Received tokens</source>
+        <translation>接收的代币</translation>
+    </message>
+    <message>
+        <source>Add Token</source>
+        <translation>添加代币</translation>
+    </message>
+
 </context>
 <context>
     <name>CoinControlDialog</name>
@@ -2950,6 +3003,7 @@
         <translation>发送比特币</translation>
     </message>
 </context>
+
 <context>
     <name>WalletView</name>
     <message>
@@ -3780,6 +3834,453 @@
     <message>
         <source>Error</source>
         <translation>错误</translation>
+    </message>
+</context>
+<context>
+    <name>CreateContract</name>
+    <message>
+        <source>Create Contract</source>
+        <translation>创建合约</translation>
+    </message>
+    <message>
+        <source>Sendto Contract</source>
+        <translation>发送合约</translation>
+    </message>
+    <message>
+        <source>Call Contract</source>
+        <translation>调用合约</translation>
+    </message>
+    <message>
+        <source>Smart Contracts</source>
+        <translation>智能合约(&amp;S)</translation>
+    </message>
+    <message>
+        <source>Create Smart Contract</source>
+        <translation>创建智能合约</translation>
+    </message>
+    <message>
+        <source>Bytecode</source>
+        <translation>字节码</translation>
+    </message>
+    <message>
+        <source>Optional</source>
+        <translation>可选项</translation>
+    </message>
+    <message>
+        <source>Sender Address</source>
+        <translation>发送者地址</translation>
+    </message>
+    <message>
+        <source>Gas Limit</source>
+        <translation>Gas 限制</translation>
+    </message>
+    <message>
+        <source>Gas Price</source>
+        <translation>Gas 价格</translation>
+    </message>
+    <message>
+        <source>Contract Template</source>
+        <translation>合约模板</translation>
+    </message>
+    <message>
+        <source>Generate Bytecode</source>
+        <translation>生成字节码</translation>
+    </message>
+    <message>
+        <source>Create Contract</source>
+        <translation>创建合约</translation>
+    </message>
+    <message>
+        <source>Clear All</source>
+        <translation>清除所有</translation>
+    </message>
+    <message>
+        <source>Interface (ABI)</source>
+        <translation>(ABI)接口</translation>
+    </message>
+    <message>
+        <source>Solidity compiler</source>
+        <translation>Solidity 编译器</translation>
+    </message>
+    <message>
+        <source>Constructor</source>
+        <translation>构造函数</translation>
+    </message>
+    <message>
+        <source>The Gas Price is too high, are you sure you want to possibly spend a max of %1 for this transaction?</source>
+        <translation>Gas价格太高，你确定你要花费该交易的%1吗？</translation>
+    </message>
+</context>
+<context>
+    <name>SendToContract</name>
+    <message>
+        <source>Create Contract</source>
+        <translation>创建合约</translation>
+    </message>
+    <message>
+        <source>Sendto Contract</source>
+        <translation>发送合约</translation>
+    </message>
+    <message>
+        <source>Call Contract</source>
+        <translation>调用合约</translation>
+    </message>
+    <message>
+        <source>Send to Smart Contract</source>
+        <translation>发送至智能合约</translation>
+    </message>
+    <message>
+        <source>Send To Contract</source>
+        <translation>发送至合约</translation>
+    </message>
+    <message>
+        <source>Contract Address</source>
+        <translation>合约地址</translation>
+    </message>
+    <message>
+        <source>Interface (ABI)</source>
+        <translation>(ABI)接口</translation>
+    </message>
+    <message>
+        <source>Data Hex</source>
+        <translation>Data Hex</translation>
+    </message>
+    <message>
+        <source>Function</source>
+        <translation>函数</translation>
+    </message>
+    <message>
+        <source>Optional</source>
+        <translation>可选项</translation>
+    </message>
+    <message>
+        <source>Sender Address</source>
+        <translation>发送者地址</translation>
+    </message>
+    <message>
+        <source>Gas Limit</source>
+        <translation>Gas 限制</translation>
+    </message>
+    <message>
+        <source>Gas Price</source>
+        <translation>Gas 价格</translation>
+    </message>
+    <message>
+        <source>Amount</source>
+        <translation>数量</translation>
+    </message>
+    <message>
+        <source>Clear All</source>
+        <translation>清除所有</translation>
+    </message>
+    <message>
+        <source>Send to Contract</source>
+        <translation>发送至智能合约</translation>
+    </message>
+    <message>
+        <source>Choose from contract book page</source>
+        <translation>从地址薄选取</translation>
+    </message>
+    <message>
+        <source>Paste contract address from clipboard</source>
+        <translation>从剪贴板粘贴</translation>
+    </message>
+    <message>
+        <source>Save contract info</source>
+        <translation>保存地址和ABI接口信息</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>标签</translation>
+    </message>
+</context>
+<context>
+    <name>CallContract</name>
+    <message>
+        <source>Create Contract</source>
+        <translation>创建合约</translation>
+    </message>
+    <message>
+        <source>Sendto Contract</source>
+        <translation>发送合约</translation>
+    </message>
+    <message>
+        <source>Call Contract</source>
+        <translation>调用合约</translation>
+    </message>
+    <message>
+        <source>Call Contract</source>
+        <translation>调用智能合约</translation>
+    </message>
+    <message>
+        <source>Clear All</source>
+        <translation>清除所有</translation>
+    </message>
+    <message>
+        <source>Contract Address</source>
+        <translation>合约地址</translation>
+    </message>
+    <message>
+        <source>Interface (ABI)</source>
+        <translation>(ABI)接口</translation>
+    </message>
+    <message>
+        <source>Function</source>
+        <translation>函数</translation>
+    </message>
+    <message>
+        <source>Optional</source>
+        <translation>可选项</translation>
+    </message>
+    <message>
+        <source>Sender Address</source>
+        <translation>发送者地址</translation>
+    </message>
+    <message>
+        <source>Call Smart Contract</source>
+        <translation>调用智能合约</translation>
+    </message>
+    <message>
+        <source>Choose from contract book page</source>
+        <translation>从地址薄选取</translation>
+    </message>
+    <message>
+        <source>Paste contract address from clipboard</source>
+        <translation>从剪贴板粘贴</translation>
+    </message>
+    <message>
+        <source>Save contract info</source>
+        <translation>保存地址和ABI接口信息</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>标签</translation>
+    </message>
+
+</context>
+<context>
+    <name>QRCToken</name>
+    <message>
+        <source>Send Token</source>
+        <translation>发送代币</translation>
+    </message>
+    <message>
+        <source>Receive Token</source>
+        <translation>接收代币</translation>
+    </message>
+    <message>
+        <source>Add Token</source>
+        <translation>添加代币</translation>
+    </message>
+    <message>
+        <source>Copy receive address</source>
+        <translation>复制接收地址</translation>
+    </message>
+    <message>
+        <source>Copy token balance</source>
+        <translation>复制代币余额</translation>
+    </message>
+    <message>
+        <source>Copy token name</source>
+        <translation>复制代币名</translation>
+    </message>
+    <message>
+        <source>Copy contract address</source>
+        <translation>复制合约地址</translation>
+    </message>
+    <message>
+        <source>Remove token</source>
+        <translation>删除代币</translation>
+    </message>
+</context>
+<context>
+    <name>SendTokenPage</name>
+    <message>
+        <source>PayTo</source>
+        <translation>付款地址</translation>
+    </message>
+    <message>
+        <source>Amount</source>
+        <translation>金额</translation>
+    </message>
+    <message>
+        <source>Description</source>
+        <translation>描述</translation>
+    </message>
+    <message>
+        <source>GasLimit</source>
+        <translation>Gas限制</translation>
+    </message>
+    <message>
+        <source>GasPrice</source>
+        <translation>Gas单价</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清除</translation>
+    </message>
+    <message>
+        <source>Confirm</source>
+        <translation>确认</translation>
+    </message>
+</context>
+<context>
+    <name>ReceiveTokenPage</name>
+    <message>
+        <source>Address</source>
+        <translation>地址</translation>
+    </message>
+</context>
+<context>
+    <name>AddTokenPage</name>
+    <message>
+        <source>Contract Address</source>
+        <translation>合约地址</translation>
+    </message>
+    <message>
+        <source>Token Name</source>
+        <translation>代币名</translation>
+    </message>
+    <message>
+        <source>Token Symbol</source>
+        <translation>代币符号</translation>
+    </message>
+    <message>
+        <source>Decimals</source>
+        <translation>精度</translation>
+    </message>
+    <message>
+        <source>Token Address</source>
+        <translation>代币地址</translation>
+    </message>
+    <message>
+    <source>Clear</source>
+    <translation>清除</translation>
+    </message>
+    <message>
+        <source>Confirm</source>
+        <translation>确认</translation>
+    </message>
+</context>
+<context>
+    <name>TokenTransactionView</name>
+    <message>
+        <source>Copy address</source>
+        <translation>复制地址</translation>
+    </message>
+    <message>
+        <source>Copy amount</source>
+        <translation>复制数量</translation>
+    </message>
+    <message>
+        <source>Copy transaction ID</source>
+        <translation>复制交易ID</translation>
+    </message>
+    <message>
+        <source>Copy full transaction details</source>
+        <translation>复制完整交易详情</translation>
+    </message>
+    <message>
+        <source>Show transaction details</source>
+        <translation>显示交易详情</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <source>Today</source>
+        <translation>今天</translation>
+    </message>
+    <message>
+        <source>This week</source>
+        <translation>这星期</translation>
+    </message>
+    <message>
+        <source>This month</source>
+        <translation>这个月</translation>
+    </message>
+    <message>
+        <source>Last month</source>
+        <translation>上个月</translation>
+    </message>
+    <message>
+        <source>This year</source>
+        <translation>今年</translation>
+    </message>
+    <message>
+        <source>Range...</source>
+        <translation>指定范围...</translation>
+    </message>
+    <message>
+        <source>Received with</source>
+        <translation>收款</translation>
+    </message>
+    <message>
+        <source>Sent to</source>
+        <translation>付款</translation>
+    </message>
+    <message>
+        <source>To yourself</source>
+        <translation>给自己</translation>
+    </message>
+    <message>
+    <source>Enter address to search</source>
+    <translation>输入地址进行搜索</translation>
+    </message>
+    <message>
+    <source>Min amount</source>
+    <translation>最小金额</translation>
+    </message>
+</context>
+<context>
+    <name>TokenTransactionTableModel</name>
+    <message>
+        <source>Date</source>
+        <translation>日期</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>种类</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>标签</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
+        <source>Amount</source>
+        <translation>数量</translation>
+    </message>
+    <message>
+        <source>Received with</source>
+        <translation>收到</translation>
+    </message>
+    <message>
+        <source>Received from</source>
+        <translation>接收</translation>
+    </message>
+    <message>
+        <source>Sent to</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <source>Payment to yourself</source>
+        <translation>发送给自己</translation>
+    </message>
+    <message>
+        <source>Mined</source>
+        <translation>挖矿所得</translation>
+    </message>
+</context>
+<context>
+    <name>AddTokenPage</name>
+    <message>
+        <source>(This is your wallet address which will be tied to the token for send/receive operations)</source>
+        <translation>(这是你的钱包地址，它将被捆绑在发送/接收操作的令牌上)</translation>
     </message>
 </context>
 </TS>
