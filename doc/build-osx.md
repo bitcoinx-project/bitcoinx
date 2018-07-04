@@ -16,7 +16,7 @@ Then install [Homebrew](https://brew.sh).
 Dependencies
 ----------------------
 
-    brew install automake berkeley-db4 libtool boost --c++11 miniupnpc openssl pkg-config protobuf qt libevent
+    brew install automake berkeley-db4 libtool boost miniupnpc openssl pkg-config protobuf qt libevent
 
 If you want to build the disk image with `make deploy` (.dmg / optional), you need RSVG
 
@@ -29,7 +29,7 @@ Build BitcoinX Core
 
 1. Clone the bitcoinx source code and cd into `bitcoinx`
 
-        git clone https://github.com/bitcoinx-project/bitcoinx
+        git clone --recursive https://github.com/bitcoinx-project/bitcoinx
         cd bitcoinx
 
 2.  Build bitcoinx-core:
