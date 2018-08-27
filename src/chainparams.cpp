@@ -5,6 +5,7 @@
 
 #include "chainparams.h"
 #include "consensus/merkle.h"
+#include "consensus/consensus.h"
 #include "pubkey.h"
 #include "tinyformat.h"
 #include "util.h"
@@ -211,7 +212,6 @@ public:
                         //   (the tx=... number in the SetBestChain debug.log lines)
             3.1         // * estimated number of transactions per second after that timestamp
         };
-
         vPreminePubKeys = {
             "0326363a407a9acc9ecc2fc65395c9741cf62e1f90abe0649b3262cf356d8d5ec3",
             "0234b445ea3f9e51f1fc397721033d11be82be684417744ac022b1e449321f13d1",

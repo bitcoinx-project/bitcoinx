@@ -36,6 +36,8 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QtCore/QVariant>
+#include <QtWidgets/QApplication>
 
 TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *parent) :
     QWidget(parent), model(0), transactionProxyModel(0),

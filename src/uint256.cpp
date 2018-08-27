@@ -63,7 +63,6 @@ void base_blob<BITS>::SetHex(const char* psz)
         }
     }
 }
-
 template <unsigned int BITS>
 void base_blob<BITS>::SetHex(const std::string& str)
 {

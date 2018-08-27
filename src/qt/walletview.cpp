@@ -16,8 +16,15 @@
 #include "sendcoinsdialog.h"
 #include "signverifymessagedialog.h"
 #include "transactiontablemodel.h"
+#include "tokentransactiontablemodel.h"
+#include "tokentransactionrecord.h"
 #include "transactionview.h"
 #include "walletmodel.h"
+#include "createcontract.h"
+#include "sendtocontract.h"
+#include "callcontract.h"
+#include "qrctoken.h"
+#include "restoredialog.h"
 
 #include "ui_interface.h"
 
@@ -28,6 +35,8 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QVBoxLayout>
+
+#include <iostream>
 
 WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     QStackedWidget(parent),
@@ -46,7 +55,7 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     QPushButton *exportButton = new QPushButton(tr("&Export"), this);
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
     if (platformStyle->getImagesOnButtons()) {
-        exportButton->setIcon(platformStyle->SingleColorIcon(":/icons/export"));
+        exportButton->setIcon(platformStyle->MultiStatesIcon(":/icons/export", PlatformStyle::PushButton));
     }
     hbox_buttons->addStretch();
     hbox_buttons->addWidget(exportButton);
@@ -59,13 +68,32 @@ WalletView::WalletView(const PlatformStyle *_platformStyle, QWidget *parent):
     usedSendingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::SendingTab, this);
     usedReceivingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::ReceivingTab, this);
 
+    createContractPage = new CreateContract(platformStyle);
+    sendToContractPage = new SendToContract(platformStyle);
+    callContractPage = new CallContract(platformStyle);
+
+    connect(createContractPage,SIGNAL(gotoCreateContract()),this,SLOT(gotoCreateContractPage()));
+    connect(createContractPage,SIGNAL(gotoSendToContract()),this,SLOT(gotoSendToContractPage()));
+    connect(createContractPage,SIGNAL(gotoCallContract()),this,SLOT(gotoCallContractPage()));
+
+    connect(sendToContractPage,SIGNAL(gotoCreateContract()),this,SLOT(gotoCreateContractPage()));
+    connect(sendToContractPage,SIGNAL(gotoSendToContract()),this,SLOT(gotoSendToContractPage()));
+    connect(sendToContractPage,SIGNAL(gotoCallContract()),this,SLOT(gotoCallContractPage()));
+
+    connect(callContractPage,SIGNAL(gotoCreateContract()),this,SLOT(gotoCreateContractPage()));
+    connect(callContractPage,SIGNAL(gotoSendToContract()),this,SLOT(gotoSendToContractPage()));
+    connect(callContractPage,SIGNAL(gotoCallContract()),this,SLOT(gotoCallContractPage()));
+
+    QRCTokenPage = new QRCToken(platformStyle);
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
     addWidget(sendCoinsPage);
+    addWidget(createContractPage);
+    addWidget(sendToContractPage);
+    addWidget(callContractPage);
+    addWidget(QRCTokenPage);
 
-    // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
-    connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), transactionView, SLOT(focusTransaction(QModelIndex)));
     connect(overviewPage, SIGNAL(outOfSyncWarningClicked()), this, SLOT(requestedSyncWarningInfo()));
 
     // Double-clicking on a transaction on the transaction history page shows details
@@ -88,8 +116,8 @@ void WalletView::setBitcoinGUI(BitcoinGUI *gui)
 {
     if (gui)
     {
-        // Clicking on a transaction on the overview page simply sends you to transaction history page
-        connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), gui, SLOT(gotoHistoryPage()));
+        // Clicking on a show more button sends you to transaction history page
+        connect(overviewPage, SIGNAL(showMoreClicked()), gui, SLOT(gotoHistoryPage()));
 
         // Receive and report messages
         connect(this, SIGNAL(message(QString,QString,unsigned int)), gui, SLOT(message(QString,QString,unsigned int)));
@@ -100,8 +128,14 @@ void WalletView::setBitcoinGUI(BitcoinGUI *gui)
         // Pass through transaction notifications
         connect(this, SIGNAL(incomingTransaction(QString,int,CAmount,QString,QString,QString)), gui, SLOT(incomingTransaction(QString,int,CAmount,QString,QString,QString)));
 
-        // Connect HD enabled state signal 
+        // Pass through token transaction notifications
+        connect(this, SIGNAL(incomingTokenTransaction(QString,QString,QString,QString,QString,QString)), gui, SLOT(incomingTokenTransaction(QString,QString,QString,QString,QString,QString)));
+
+        // Connect HD enabled state signal
         connect(this, SIGNAL(hdEnabledStatusChanged(int)), gui, SLOT(setHDStatus(int)));
+
+        // Clicking on add token button sends you to add token page
+        connect(overviewPage, SIGNAL(addTokenClicked()), gui, SLOT(gotoAddTokenPage()));
     }
 }
 
@@ -111,6 +145,10 @@ void WalletView::setClientModel(ClientModel *_clientModel)
 
     overviewPage->setClientModel(_clientModel);
     sendCoinsPage->setClientModel(_clientModel);
+    createContractPage->setClientModel(_clientModel);
+    sendToContractPage->setClientModel(_clientModel);
+    callContractPage->setClientModel(_clientModel);
+    QRCTokenPage->setClientModel(_clientModel);
 }
 
 void WalletView::setWalletModel(WalletModel *_walletModel)
@@ -122,6 +160,10 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
     overviewPage->setWalletModel(_walletModel);
     receiveCoinsPage->setModel(_walletModel);
     sendCoinsPage->setModel(_walletModel);
+    createContractPage->setModel(_walletModel);
+    sendToContractPage->setModel(_walletModel);
+    callContractPage->setModel(_walletModel);
+    QRCTokenPage->setModel(_walletModel);
     usedReceivingAddressesPage->setModel(_walletModel->getAddressTableModel());
     usedSendingAddressesPage->setModel(_walletModel->getAddressTableModel());
 
@@ -140,6 +182,10 @@ void WalletView::setWalletModel(WalletModel *_walletModel)
         // Balloon pop-up for new transaction
         connect(_walletModel->getTransactionTableModel(), SIGNAL(rowsInserted(QModelIndex,int,int)),
                 this, SLOT(processNewTransaction(QModelIndex,int,int)));
+
+        // Balloon pop-up for new token transaction
+        connect(_walletModel->getTokenTransactionTableModel(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+                this, SLOT(processNewTokenTransaction(QModelIndex,int,int)));
 
         // Ask for passphrase if needed
         connect(_walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));
@@ -169,6 +215,37 @@ void WalletView::processNewTransaction(const QModelIndex& parent, int start, int
     Q_EMIT incomingTransaction(date, walletModel->getOptionsModel()->getDisplayUnit(), amount, type, address, label);
 }
 
+void WalletView::processNewTokenTransaction(const QModelIndex &parent, int start, int /*end*/)
+{
+    // Prevent balloon-spam when initial block download is in progress
+    if (!walletModel || !clientModel || clientModel->inInitialBlockDownload())
+        return;
+
+    TokenTransactionTableModel *tttm = walletModel->getTokenTransactionTableModel();
+    if (!tttm || tttm->processingQueuedTransactions())
+        return;
+
+    QString date = tttm->index(start, TokenTransactionTableModel::Date, parent).data().toString();
+    QString amount(tttm->index(start, TokenTransactionTableModel::Amount, parent).data(TokenTransactionTableModel::FormattedAmountWithUnitRole).toString());
+    QString type = tttm->index(start, TokenTransactionTableModel::Type, parent).data().toString();
+    QModelIndex index = tttm->index(start, 0, parent);
+    QString address = tttm->data(index, TokenTransactionTableModel::AddressRole).toString();
+    QString label = tttm->data(index, TokenTransactionTableModel::LabelRole).toString();
+    QString title;
+    int txType = tttm->data(index, TokenTransactionTableModel::TypeRole).toInt();
+    switch (txType)
+    {
+    case TokenTransactionRecord::RecvWithAddress:
+    case TokenTransactionRecord::RecvFromOther:
+        title = tr("Incoming transaction");
+        break;
+    default:
+        title = tr("Sent transaction");
+        break;
+    }
+    Q_EMIT incomingTokenTransaction(date, amount, type, address, label, title);
+}
+
 void WalletView::gotoOverviewPage()
 {
     setCurrentWidget(overviewPage);
@@ -190,6 +267,50 @@ void WalletView::gotoSendCoinsPage(QString addr)
 
     if (!addr.isEmpty())
         sendCoinsPage->setAddress(addr);
+}
+void WalletView::gotoContractPage()
+{
+    switch(currentContractPage)
+    {
+        case CREATE_CONTRACT:
+        gotoCreateContractPage();
+        break;
+        case SENDTO_CONTRACT:
+        gotoSendToContractPage();
+        break;
+        case CALL_CONTRACT:
+        gotoCallContractPage();
+        break;
+    }
+}
+void WalletView::gotoCreateContractPage()
+{
+    createContractPage->setTabBarInfo();
+    setCurrentWidget(createContractPage);
+    createContractPage->initGasPriceStyle();
+    currentContractPage = CREATE_CONTRACT;
+}
+
+void WalletView::gotoSendToContractPage()
+{
+    sendToContractPage->setTabBarInfo();
+    setCurrentWidget(sendToContractPage);
+    sendToContractPage->initGasPriceStyle();
+    currentContractPage = SENDTO_CONTRACT;
+
+}
+
+void WalletView::gotoCallContractPage()
+{
+    callContractPage->setTabBarInfo();
+    setCurrentWidget(callContractPage);
+    currentContractPage = CALL_CONTRACT;
+}
+
+void WalletView::gotoTokenPage()
+{
+    setCurrentWidget(QRCTokenPage);
+    QRCTokenPage->on_gotoTokenPage();
 }
 
 void WalletView::gotoSignMessageTab(QString addr)
@@ -261,6 +382,13 @@ void WalletView::backupWallet()
     }
 }
 
+void WalletView::restoreWallet()
+{
+    RestoreDialog dlg(this);
+    dlg.setModel(walletModel);
+    dlg.exec();
+}
+
 void WalletView::changePassphrase()
 {
     AskPassphraseDialog dlg(AskPassphraseDialog::ChangePass, this);
@@ -268,17 +396,27 @@ void WalletView::changePassphrase()
     dlg.exec();
 }
 
-void WalletView::unlockWallet()
+void WalletView::unlockWallet(bool fromMenu)
 {
     if(!walletModel)
         return;
     // Unlock wallet when requested by wallet model
     if (walletModel->getEncryptionStatus() == WalletModel::Locked)
     {
-        AskPassphraseDialog dlg(AskPassphraseDialog::Unlock, this);
+        AskPassphraseDialog::Mode mode = fromMenu ?
+            AskPassphraseDialog::UnlockStaking : AskPassphraseDialog::Unlock;
+        AskPassphraseDialog dlg(mode, this);
         dlg.setModel(walletModel);
         dlg.exec();
     }
+}
+
+void WalletView::lockWallet()
+{
+    if(!walletModel)
+        return;
+
+    walletModel->setWalletLocked(true);
 }
 
 void WalletView::usedSendingAddresses()
