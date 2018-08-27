@@ -307,6 +307,7 @@ BITCOIN_QT_H = \
   qt/signverifymessagedialog.h \
   qt/splashscreen.h \
   qt/styleSheet.h \
+  qt/switchbuttonstyle.h \
   qt/tabbarinfo.h \
   qt/titlebar.h \
   qt/token.h \
