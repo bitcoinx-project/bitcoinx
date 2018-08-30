@@ -2679,7 +2679,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
             EthState::Instance()->setUTXORoot(oldHashUTXORoot);
             TxExecRecord::Instance()->ClearCache();
 
-            return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
+            return error("%s: ConnectBlock %s failed, %s", __func__, pindexNew->GetBlockHash().ToString(), FormatStateMessage(state));
         }
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
         LogPrint(BCLog::BENCH, "  - Connect total: %.2fms [%.2fs]\n", (nTime3 - nTime2) * 0.001, nTimeConnectTotal * 0.000001);
