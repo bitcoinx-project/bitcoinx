@@ -2220,7 +2220,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                     if (i > checkBlock.vtx.size()) {
                         LogPrintf("Unexpected transaction: %s\n", block.vtx[i]->ToString());
                     } else {
-                        if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                        if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                             LogPrintf("Mismatched transaction at entry %i\n", i);
                             LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                             LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
@@ -2233,7 +2233,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                     if (i > block.vtx.size()) {
                         LogPrintf("Missing transaction: %s\n", checkBlock.vtx[i]->ToString());
                     } else {
-                        if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                        if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                             LogPrintf("Mismatched transaction at entry %i\n", i);
                             LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                             LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
@@ -2243,7 +2243,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
             } else {
                 // count is correct, but a tx is wrong
                 for (size_t i = 0; i < checkBlock.vtx.size(); i++) {
-                    if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                    if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                         LogPrintf("Mismatched transaction at entry %i\n", i);
                         LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                         LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
