@@ -9,7 +9,7 @@
 #include <QPainter>
 
 
-#include <iostream>
+
 ABIFunctionField::ABIFunctionField(const PlatformStyle *platformStyle, FunctionType type, QWidget *parent) :
     QWidget(parent),
     m_contractABI(0),
