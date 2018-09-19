@@ -4389,7 +4389,7 @@ bool CWallet::LoadTokenTx(const CTokenTx &tokenTx)
 }
 
 bool CWallet::AddTokenEntry(const CTokenInfo &token, bool fFlushOnClose)
-{
+{   
     LOCK2(cs_main, cs_wallet);
 
     CWalletDB walletdb(*dbw, "r+", fFlushOnClose);

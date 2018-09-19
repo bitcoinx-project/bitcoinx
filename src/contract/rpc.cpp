@@ -21,7 +21,6 @@
 #include "txexecrecord.h"
 #include "txdb.h"
 
-#include <iostream>
 extern std::unique_ptr<CConnman> g_connman;
 
 UniValue createcontract(const JSONRPCRequest& request)
@@ -1228,7 +1227,7 @@ UniValue searchexecrecord(const JSONRPCRequest& request)
             }
         }
     }
-
+    
     return result;
 }
 

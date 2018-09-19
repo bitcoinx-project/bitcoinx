@@ -194,6 +194,9 @@ void SendTokenPage::on_confirmClicked()
                 tokenTx.transactionHash = uint256S(m_tokenABI->getTxId());
                 tokenTx.strLabel = label;
                 m_model->addTokenTxEntry(tokenTx);
+            }else
+            {
+                QMessageBox::information(this, QString::fromLocal8Bit("warning"),QString::fromLocal8Bit("Send Token Failed")); 
             }
             clearAll();
         }
