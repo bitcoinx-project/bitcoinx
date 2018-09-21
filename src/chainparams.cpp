@@ -5,7 +5,6 @@
 
 #include "chainparams.h"
 #include "consensus/merkle.h"
-#include "consensus/consensus.h"
 #include "pubkey.h"
 #include "tinyformat.h"
 #include "util.h"

@@ -7,7 +7,7 @@
 
 namespace EventLog_NS
 {
-static const QString RPC_SERACH_LOGS = "searchlogs";
+static const QString RPC_SERACH_LOGS = "searchexecrecord";
 static const QString PARAM_FROM_BLOCK = "fromBlock";
 static const QString PARAM_TO_BLOCK = "toBlock";
 static const QString PARAM_ADDRESSES = "address";

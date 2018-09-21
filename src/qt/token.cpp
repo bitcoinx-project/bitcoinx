@@ -80,7 +80,7 @@ bool ToBitcoinXAddress(const std::string& strHash160, std::string& strBitcoinXAd
     CBitcoinAddress BitcoinXAddress;
     BitcoinXAddress.Set(keyid);
     if(BitcoinXAddress.IsValid()){
-        BitcoinXAddress = BitcoinXAddress.ToString();
+        strBitcoinXAddress = BitcoinXAddress.ToString();
         return true;
     }
     return false;
@@ -536,7 +536,6 @@ bool Token::execEvents(int64_t fromBlock, int64_t toBlock, int func, std::vector
     senderAddress  = "000000000000000000000000" + senderAddress;
     if(!(d->eventLog->searchTokenTx(fromBlock, toBlock, contractAddress, senderAddress, result)))
         return false;
-
     // Parse the result events
     QList<QVariant> list = result.toList();
     for(int i = 0; i < list.size(); i++)

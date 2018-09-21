@@ -130,9 +130,7 @@ public:
     int ReadHeightIndex(int low, int high, int minconf,
             std::vector<std::vector<uint256>> &blocksOfHashes,
             std::set<dev::h160> const &addresses);
-    bool EraseHeightIndex(const unsigned int &height);
     bool WipeHeightIndex();
-
 };
 
 #endif // BITCOIN_TXDB_H
