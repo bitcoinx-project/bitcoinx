@@ -14,7 +14,6 @@ typedef int64_t CAmount;
 static const CAmount BTC_2_BCX_RATE = 10000;
 
 static const CAmount COIN = 100000000 / BTC_2_BCX_RATE;
-static const CAmount CENT = 1000000 / BTC_2_BCX_RATE;
 
 
 /** No amount larger than this (in satoshi) is valid.
