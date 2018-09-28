@@ -9,6 +9,9 @@
 #include "net.h"
 #include "validationinterface.h"
 #include "consensus/params.h"
+#include <sync.h>
+
+extern CCriticalSection cs_main;
 
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
@@ -63,7 +66,7 @@ public:
 
     void ConsiderEviction(CNode *pto, int64_t time_in_seconds);
     void CheckForStaleTipAndEvictPeers(const Consensus::Params &consensusParams);
-    void EvictExtraOutboundPeers(int64_t time_in_seconds);
+    void EvictExtraOutboundPeers(int64_t time_in_seconds) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 private:
     int64_t m_stale_tip_check_time; //! Next time to check for stale tip
