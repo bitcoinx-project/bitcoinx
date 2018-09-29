@@ -688,6 +688,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
         {
             pwalletdbEncryption->TxnAbort();
             delete pwalletdbEncryption;
+            pwalletdbEncryption = nullptr;
             // We now probably have half of our keys encrypted in memory, and half not...
             // die and let the user reload the unencrypted wallet.
             assert(false);
@@ -698,6 +699,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
 
         if (!pwalletdbEncryption->TxnCommit()) {
             delete pwalletdbEncryption;
+            pwalletdbEncryption = nullptr;
             // We now have keys encrypted in memory, but not on disk...
             // die to avoid confusion and let the user reload the unencrypted wallet.
             assert(false);
