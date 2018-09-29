@@ -200,7 +200,7 @@ void TestChaCha20(const std::string &hexkey, uint64_t nonce, uint64_t seek, cons
     BOOST_CHECK(out == outres);
 }
 
-std::string LongTestString(void) {
+std::string LongTestString() {
     std::string ret;
     for (int i=0; i<200000; i++) {
         ret += (unsigned char)(i);
