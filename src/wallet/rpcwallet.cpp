@@ -29,6 +29,8 @@
 
 #include <stdint.h>
 
+#include <boost/optional.hpp>
+
 #include <univalue.h>
 
 static const std::string WALLET_ENDPOINT_BASE = "/wallet/";
@@ -76,6 +78,9 @@ void EnsureWalletIsUnlocked(CWallet * const pwallet)
 {
     if (pwallet->IsLocked()) {
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Please enter the wallet passphrase with walletpassphrase first.");
+    }
+    if (fWalletUnlockStakingOnly) {
+        throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Error: Wallet is unlocked for staking only.");
     }
 }
 
@@ -387,6 +392,12 @@ static void SendMoney(CWallet * const pwallet, const CTxDestination &address, CA
 
     if (pwallet->GetBroadcastTransactions() && !g_connman) {
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
+    }
+
+    if (fWalletUnlockStakingOnly)
+    {
+        std::string strError = _("Error: Wallet unlocked for staking only, unable to create transaction.");
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
 
     // Parse Bitcoin address
@@ -2144,7 +2155,17 @@ UniValue walletpassphrase(const JSONRPCRequest& request)
 
     if (strWalletPass.length() > 0)
     {
+        // Used to restore fWalletUnlockStakingOnly value in case of unlock failure 
+        bool tmpStakingOnly = fWalletUnlockStakingOnly;
+
+        // ppcoin: if user OS account compromised prevent trivial sendmoney commands
+        if (request.params.size() > 2)
+            fWalletUnlockStakingOnly = request.params[2].get_bool();
+        else
+            fWalletUnlockStakingOnly = false;
+    
         if (!pwallet->Unlock(strWalletPass)) {
+            fWalletUnlockStakingOnly = tmpStakingOnly;
             throw JSONRPCError(RPC_WALLET_PASSPHRASE_INCORRECT, "Error: The wallet passphrase entered was incorrect.");
         }
     }
