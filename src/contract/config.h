@@ -20,6 +20,7 @@ static const uint64_t DEFAULT_BLOCK_GAS_LIMIT = 40000000;
 static const uint64_t MIN_GAS_PRICE = 40;
 static const uint64_t DEFAULT_GAS_PRICE = 40;
 static const uint64_t MAX_RPC_GAS_PRICE = 100;
+static const uint8_t MAX_GAS_PRICE_PRECISION = 8;
 
 // Contract executions with less gas than this are not standard
 // Make sure is always equal or greater than MINIMUM_GAS_LIMIT (which we can't reference here due to insane header dependency chains)
