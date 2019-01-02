@@ -10,6 +10,7 @@
 #include "guiutil.h"
 #include "optionsmodel.h"
 #include "walletmodel.h"
+#include "styleSheet.h"
 
 #include <QClipboard>
 #include <QDrag>
@@ -96,6 +97,10 @@ ReceiveRequestDialog::ReceiveRequestDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    SetObjectStyleSheet(ui->btnCopyURI, StyleSheetNames::ButtonWhite);
+    SetObjectStyleSheet(ui->btnSaveAs, StyleSheetNames::ButtonWhite);
+    SetObjectStyleSheet(ui->btnCopyAddress, StyleSheetNames::ButtonWhite);
+
 #ifndef USE_QRCODE
     ui->btnSaveAs->setVisible(false);
     ui->lblQRCode->setVisible(false);
@@ -124,6 +129,64 @@ void ReceiveRequestDialog::setInfo(const SendCoinsRecipient &_info)
 {
     this->info = _info;
     update();
+}
+
+bool ReceiveRequestDialog::createQRCode(QLabel *label, SendCoinsRecipient _info, bool showAddress)
+{
+#ifdef USE_QRCODE
+    QString uri = GUIUtil::formatBitcoinURI(_info);
+    label->setText("");
+    if(!uri.isEmpty())
+    {
+        // limit URI length
+        if (uri.length() > MAX_URI_LENGTH)
+        {
+            label->setText(tr("Resulting URI too long, try to reduce the text for label / message."));
+        } else {
+            QRcode *code = QRcode_encodeString(uri.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+            if (!code)
+            {
+                label->setText(tr("Error encoding URI into QR Code."));
+                return false;
+            }
+            QImage qrImage = QImage(code->width + 8, code->width + 8, QImage::Format_ARGB32);
+            qrImage.fill(qRgba(0, 0, 0, 0));
+            unsigned char *p = code->data;
+            for (int y = 0; y < code->width; y++)
+            {
+                for (int x = 0; x < code->width; x++)
+                {
+                    qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? qRgba(0, 0, 0, 255) : qRgba(255, 255, 255, 255)));
+                    p++;
+                }
+            }
+            QRcode_free(code);
+
+            QImage qrAddrImage = QImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE+20, QImage::Format_ARGB32);
+            qrAddrImage.fill(qRgba(0, 0, 0, 0));
+            QPainter painter(&qrAddrImage);
+            painter.drawImage(0, 0, qrImage.scaled(QR_IMAGE_SIZE, QR_IMAGE_SIZE));
+
+            if(showAddress)
+            {
+                QFont font = GUIUtil::fixedPitchFont();
+                font.setPixelSize(12);
+                painter.setFont(font);
+                QRect paddedRect = qrAddrImage.rect();
+                paddedRect.setHeight(QR_IMAGE_SIZE+12);
+                painter.drawText(paddedRect, Qt::AlignBottom|Qt::AlignCenter, _info.address);
+                painter.end();
+            }
+
+            label->setPixmap(QPixmap::fromImage(qrAddrImage));
+            return true;
+        }
+    }
+#else
+    Q_UNUSED(label);
+    Q_UNUSED(_info);
+#endif
+    return false;
 }
 
 void ReceiveRequestDialog::update()

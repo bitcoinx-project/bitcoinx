@@ -22,7 +22,7 @@ public:
     void sendAppleScript(const QString &script);
 
     /** check if OS can handle UserNotifications */
-    bool hasUserNotificationCenterSupport(void);
+    bool hasUserNotificationCenterSupport();
     static MacNotificationHandler *instance();
 };
 

@@ -13,6 +13,9 @@
 #include "recentrequeststablemodel.h"
 #include "sendcoinsdialog.h"
 #include "transactiontablemodel.h"
+#include "tokenitemmodel.h"
+#include "tokentransactiontablemodel.h"
+#include "contracttablemodel.h"
 
 #include "base58.h"
 #include "chain.h"
@@ -35,13 +38,25 @@
 #include <QMessageBox>
 #include <QSet>
 #include <QTimer>
+#include <QFile>
+#include <QSettings>
 
 
 WalletModel::WalletModel(const PlatformStyle *platformStyle, CWallet *_wallet, OptionsModel *_optionsModel, QObject *parent) :
     QObject(parent), wallet(_wallet), optionsModel(_optionsModel), addressTableModel(0),
+    contractTableModel(0),
     transactionTableModel(0),
     recentRequestsTableModel(0),
-    cachedBalance(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0),
+    tokenItemModel(0),
+    tokenTransactionTableModel(0),
+    cachedBalance(0), 
+    cachedUnconfirmedBalance(0), 
+    cachedImmatureBalance(0), 
+    cachedStake(0),
+    cachedWatchOnlyBalance(0), 
+    cachedWatchUnconfBalance(0), 
+    cachedWatchImmatureBalance(0), 
+    cachedWatchOnlyStake(0),
     cachedEncryptionStatus(Unencrypted),
     cachedNumBlocks(0)
 {
@@ -49,8 +64,11 @@ WalletModel::WalletModel(const PlatformStyle *platformStyle, CWallet *_wallet, O
     fForceCheckBalanceChanged = false;
 
     addressTableModel = new AddressTableModel(wallet, this);
+    contractTableModel = new ContractTableModel(wallet, this);
     transactionTableModel = new TransactionTableModel(platformStyle, wallet, this);
     recentRequestsTableModel = new RecentRequestsTableModel(wallet, this);
+    tokenItemModel = new TokenItemModel(wallet, this);
+    tokenTransactionTableModel = new TokenTransactionTableModel(platformStyle, wallet, this);
 
     // This timer will be fired repeatedly to update the balance
     pollTimer = new QTimer(this);
@@ -125,7 +143,8 @@ void WalletModel::pollBalanceChanged()
     if(!lockWallet)
         return;
 
-    if(fForceCheckBalanceChanged || chainActive.Height() != cachedNumBlocks)
+    bool cachedNumBlocksChanged = chainActive.Height() != cachedNumBlocks;
+    if(fForceCheckBalanceChanged || cachedNumBlocksChanged)
     {
         fForceCheckBalanceChanged = false;
 
@@ -135,7 +154,21 @@ void WalletModel::pollBalanceChanged()
         checkBalanceChanged();
         if(transactionTableModel)
             transactionTableModel->updateConfirmations();
+
+        if(tokenTransactionTableModel)
+            tokenTransactionTableModel->updateConfirmations();
+
+        if(cachedNumBlocksChanged)
+        {
+            checkTokenBalanceChanged();
+        }
     }
+}
+
+void WalletModel::updateContractBook(const QString &address, const QString &label, const QString &abi, int status)
+{
+    if(contractTableModel)
+        contractTableModel->updateEntry(address, label, abi, status);
 }
 
 void WalletModel::checkBalanceChanged()
@@ -164,6 +197,14 @@ void WalletModel::checkBalanceChanged()
         cachedWatchImmatureBalance = newWatchImmatureBalance;
         Q_EMIT balanceChanged(newBalance, newUnconfirmedBalance, newImmatureBalance,
                             newWatchOnlyBalance, newWatchUnconfBalance, newWatchImmatureBalance);
+    }
+}
+
+void WalletModel::checkTokenBalanceChanged()
+{
+    if(tokenItemModel)
+    {
+        tokenItemModel->checkTokenBalanceChanged();
     }
 }
 
@@ -383,6 +424,11 @@ AddressTableModel *WalletModel::getAddressTableModel()
     return addressTableModel;
 }
 
+ContractTableModel *WalletModel::getContractTableModel()
+{
+    return contractTableModel;
+}
+
 TransactionTableModel *WalletModel::getTransactionTableModel()
 {
     return transactionTableModel;
@@ -392,6 +438,17 @@ RecentRequestsTableModel *WalletModel::getRecentRequestsTableModel()
 {
     return recentRequestsTableModel;
 }
+
+TokenItemModel *WalletModel::getTokenItemModel()
+{
+    return tokenItemModel;
+}
+
+TokenTransactionTableModel *WalletModel::getTokenTransactionTableModel()
+{
+    return tokenTransactionTableModel;
+}
+
 
 WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
 {
@@ -450,8 +507,39 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri
 
 bool WalletModel::backupWallet(const QString &filename)
 {
-    return wallet->BackupWallet(filename.toLocal8Bit().data());
+    bool ret =  wallet->BackupWallet(filename.toLocal8Bit().data());
+
+    // Set number of backups
+    QSettings settings;
+    int walletHasBackup = settings.value("walletBackupsNumber", 0).toInt();
+    settings.setValue("walletBackupsNumber", walletHasBackup + (ret ? 1 : 0));
+
+    return ret;
 }
+
+bool WalletModel::hasWalletBackup()
+{
+    QSettings settings;
+    return settings.value("walletBackupsNumber", 0).toBool();
+}
+
+bool WalletModel::restoreWallet(const QString &filename, const QString &param)
+{
+    if(QFile::exists(filename))
+    {
+        fs::path pathWalletBak = GetDataDir() / strprintf("wallet.%d.bak", GetTime());
+        QString walletBak = QString::fromStdString(pathWalletBak.string());
+        if(backupWallet(walletBak))
+        {
+            restorePath = filename;
+            restoreParam = param;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 // Handlers for core signals
 static void NotifyKeyStoreStatusChanged(WalletModel *walletmodel, CCryptoKeyStore *wallet)
@@ -499,6 +587,21 @@ static void NotifyWatchonlyChanged(WalletModel *walletmodel, bool fHaveWatchonly
                               Q_ARG(bool, fHaveWatchonly));
 }
 
+static void NotifyContractBookChanged(WalletModel *walletmodel, CWallet *wallet,
+        const std::string &address, const std::string &label, const std::string &abi, ChangeType status)
+{
+    QString strAddress = QString::fromStdString(address);
+    QString strLabel = QString::fromStdString(label);
+    QString strAbi = QString::fromStdString(abi);
+
+    qDebug() << "NotifyContractBookChanged: " + strAddress + " " + strLabel + " status=" + QString::number(status);
+    QMetaObject::invokeMethod(walletmodel, "updateContractBook", Qt::QueuedConnection,
+                              Q_ARG(QString, strAddress),
+                              Q_ARG(QString, strLabel),
+                              Q_ARG(QString, strAbi),
+                              Q_ARG(int, status));
+}
+
 void WalletModel::subscribeToCoreSignals()
 {
     // Connect signals to wallet
@@ -507,6 +610,7 @@ void WalletModel::subscribeToCoreSignals()
     wallet->NotifyTransactionChanged.connect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
     wallet->ShowProgress.connect(boost::bind(ShowProgress, this, _1, _2));
     wallet->NotifyWatchonlyChanged.connect(boost::bind(NotifyWatchonlyChanged, this, _1));
+    wallet->NotifyContractBookChanged.connect(boost::bind(NotifyContractBookChanged, this, _1, _2, _3, _4, _5));
 }
 
 void WalletModel::unsubscribeFromCoreSignals()
@@ -517,12 +621,20 @@ void WalletModel::unsubscribeFromCoreSignals()
     wallet->NotifyTransactionChanged.disconnect(boost::bind(NotifyTransactionChanged, this, _1, _2, _3));
     wallet->ShowProgress.disconnect(boost::bind(ShowProgress, this, _1, _2));
     wallet->NotifyWatchonlyChanged.disconnect(boost::bind(NotifyWatchonlyChanged, this, _1));
+    wallet->NotifyContractBookChanged.disconnect(boost::bind(NotifyContractBookChanged, this, _1, _2, _3, _4, _5));
 }
 
 // WalletModel::UnlockContext implementation
 WalletModel::UnlockContext WalletModel::requestUnlock()
 {
     bool was_locked = getEncryptionStatus() == Locked;
+
+    if ((!was_locked) && fWalletUnlockStakingOnly)
+    {
+       setWalletLocked(true);
+       was_locked = getEncryptionStatus() == Locked;
+    }
+
     if(was_locked)
     {
         // Request UI to unlock wallet
@@ -531,14 +643,20 @@ WalletModel::UnlockContext WalletModel::requestUnlock()
     // If wallet is still locked, unlock was failed or cancelled, mark context as invalid
     bool valid = getEncryptionStatus() != Locked;
 
-    return UnlockContext(this, valid, was_locked);
+    return UnlockContext(this, valid, was_locked && !fWalletUnlockStakingOnly);
 }
 
 WalletModel::UnlockContext::UnlockContext(WalletModel *_wallet, bool _valid, bool _relock):
         wallet(_wallet),
         valid(_valid),
-        relock(_relock)
+        relock(_relock),
+        stakingOnly(false)
 {
+    if(!relock)
+    {
+        stakingOnly = fWalletUnlockStakingOnly;
+        fWalletUnlockStakingOnly = false;
+    }
 }
 
 WalletModel::UnlockContext::~UnlockContext()
@@ -546,6 +664,12 @@ WalletModel::UnlockContext::~UnlockContext()
     if(valid && relock)
     {
         wallet->setWalletLocked(true);
+    }
+
+    if(!relock)
+    {
+        fWalletUnlockStakingOnly = stakingOnly;
+        wallet->updateStatus();
     }
 }
 
@@ -589,6 +713,26 @@ bool WalletModel::isSpent(const COutPoint& outpoint) const
 {
     LOCK2(cs_main, wallet->cs_wallet);
     return wallet->IsSpent(outpoint.hash, outpoint.n);
+}
+
+bool WalletModel::isUnspentAddress(const std::string &BitcoinXAddress) const
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+
+    std::vector<COutput> vecOutputs;
+    wallet->AvailableCoins(vecOutputs);
+    for (const COutput& out : vecOutputs)
+    {
+        CTxDestination address;
+        const CScript& scriptPubKey = out.tx->tx->vout[out.i].scriptPubKey;
+        bool fValidAddress = ExtractDestination(scriptPubKey, address);
+
+        if(fValidAddress && CBitcoinAddress(address).ToString() == BitcoinXAddress && out.tx->tx->vout[out.i].nValue)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)
@@ -756,3 +900,69 @@ bool WalletModel::getDefaultWalletRbf() const
 {
     return fWalletRbf;
 }
+
+bool WalletModel::addTokenEntry(const CTokenInfo &token)
+{
+    return wallet->AddTokenEntry(token, true);
+}
+
+bool WalletModel::addTokenTxEntry(const CTokenTx& tokenTx, bool fFlushOnClose)
+{
+    return wallet->AddTokenTxEntry(tokenTx, fFlushOnClose);
+}
+
+bool WalletModel::existTokenEntry(const CTokenInfo &token)
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+
+    uint256 hash = token.GetHash();
+    std::map<uint256, CTokenInfo>::iterator it = wallet->mapToken.find(hash);
+
+    return it != wallet->mapToken.end();
+}
+
+bool WalletModel::removeTokenEntry(const std::string &sHash)
+{
+    return wallet->RemoveTokenEntry(uint256S(sHash), true);
+}
+
+QString WalletModel::getRestorePath()
+{
+    return restorePath;
+}
+
+QString WalletModel::getRestoreParam()
+{
+    return restoreParam;
+}
+
+std::vector<CTokenInfo> WalletModel::getInvalidTokens()
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+
+    std::vector<CTokenInfo> listInvalid;
+    for(auto& info : wallet->mapToken)
+    {
+        std::string strAddress = info.second.strSenderAddress;
+        CBitcoinAddress address(strAddress);
+        if(!IsMine(*wallet, address.Get()))
+        {
+            listInvalid.push_back(info.second);
+        }
+    }
+
+    return listInvalid;
+}
+
+bool WalletModel::isMineAddress(const std::string &strAddress)
+{
+    LOCK2(cs_main, wallet->cs_wallet);
+
+    CBitcoinAddress address(strAddress);
+    if(!address.IsValid() || !IsMine(*wallet, address.Get()))
+    {
+        return false;
+    }
+    return true;
+}
+

@@ -2220,7 +2220,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                     if (i > checkBlock.vtx.size()) {
                         LogPrintf("Unexpected transaction: %s\n", block.vtx[i]->ToString());
                     } else {
-                        if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                        if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                             LogPrintf("Mismatched transaction at entry %i\n", i);
                             LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                             LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
@@ -2233,7 +2233,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                     if (i > block.vtx.size()) {
                         LogPrintf("Missing transaction: %s\n", checkBlock.vtx[i]->ToString());
                     } else {
-                        if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                        if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                             LogPrintf("Mismatched transaction at entry %i\n", i);
                             LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                             LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
@@ -2243,7 +2243,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
             } else {
                 // count is correct, but a tx is wrong
                 for (size_t i = 0; i < checkBlock.vtx.size(); i++) {
-                    if (block.vtx[i]->GetHash() != block.vtx[i]->GetHash()) {
+                    if (block.vtx[i]->GetHash() != checkBlock.vtx[i]->GetHash()) {
                         LogPrintf("Mismatched transaction at entry %i\n", i);
                         LogPrintf("Actual: %s\n", block.vtx[i]->ToString());
                         LogPrintf("Expected: %s\n", checkBlock.vtx[i]->ToString());
@@ -2679,7 +2679,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
             EthState::Instance()->setUTXORoot(oldHashUTXORoot);
             TxExecRecord::Instance()->ClearCache();
 
-            return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
+            return error("%s: ConnectBlock %s failed, %s", __func__, pindexNew->GetBlockHash().ToString(), FormatStateMessage(state));
         }
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
         LogPrint(BCLog::BENCH, "  - Connect total: %.2fms [%.2fs]\n", (nTime3 - nTime2) * 0.001, nTimeConnectTotal * 0.000001);
@@ -3355,7 +3355,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // Check transactions
     bool fLastIsContractTx = false;
     for (const auto& tx : block.vtx) {
-        if (!CheckTransaction(*tx, state, false)) {
+        if (!CheckTransaction(*tx, state, true)) {
             return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),
                 strprintf("Transaction check failed (tx hash %s) %s", tx->GetHash().ToString(), state.GetDebugMessage()));
         }
@@ -4159,6 +4159,10 @@ bool static LoadBlockIndexDB(const CChainParams& chainparams)
     pblocktree->ReadFlag("txindex", fTxIndex);
     LogPrintf("%s: transaction index %s\n", __func__, fTxIndex ? "enabled" : "disabled");
 
+    // Check whether we have a transaction index
+    pblocktree->ReadFlag("logevents", fLogEvents);
+    LogPrintf("%s: log events index %s\n", __func__, fLogEvents ? "enabled" : "disabled");
+
     return true;
 }
 
@@ -4912,7 +4916,7 @@ int VersionBitsTipStateSinceHeight(const Consensus::Params& params, Consensus::D
 
 static const uint64_t MEMPOOL_DUMP_VERSION = 1;
 
-bool LoadMempool(void)
+bool LoadMempool()
 {
     const CChainParams& chainparams = Params();
     int64_t nExpiryTimeout = gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60;
@@ -4978,7 +4982,7 @@ bool LoadMempool(void)
     return true;
 }
 
-void DumpMempool(void)
+void DumpMempool()
 {
     int64_t start = GetTimeMicros();
 

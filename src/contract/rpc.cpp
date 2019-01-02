@@ -1227,7 +1227,7 @@ UniValue searchexecrecord(const JSONRPCRequest& request)
             }
         }
     }
-
+    
     return result;
 }
 

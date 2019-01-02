@@ -111,3 +111,9 @@ libbitcoinconsensus.pc
 contrib/devtools/split-debug.sh
 
 \.vscode/
+bitcoinx.config
+bitcoinx.creator
+bitcoinx.creator.user
+bitcoinx.files
+bitcoinx.includes
+
