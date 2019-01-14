@@ -71,6 +71,10 @@ public:
         functionality.
     */
     bool addWallet(const QString& name, WalletModel *walletModel);
+    /** Get the tray icon status.
+        Some systems have not "system tray" or "notification area" available.
+     */
+    bool hasTrayIcon() const { return trayIcon; }
     bool setCurrentWallet(const QString& name);
     void removeAllWallets();
 #endif // ENABLE_WALLET
