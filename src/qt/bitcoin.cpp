@@ -523,7 +523,7 @@ void BitcoinApplication::initializeResult(bool success)
 #endif
 
         // If -min option passed, start window minimized (iconified) or minimized to tray.
-        if(gArgs.GetBoolArg("-min", false)) {
+        if(!gArgs.GetBoolArg("-min", false)) {
             window->show();
         } else if (clientModel->getOptionsModel()->getMinimizeToTray() && window->hasTrayIcon()){
             // do nothing as the window is managed by the tray icon
